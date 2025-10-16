@@ -9,7 +9,6 @@ import {
   AlertCircle,
   CheckCircle,
   FileJson,
-  FileText,
 } from "lucide-react";
 
 export interface Transaction {
@@ -260,50 +259,6 @@ const GrandLivreComptesApp: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const downloadListeComptes = () => {
-    // Créer une liste des comptes sans les transactions
-    const listeComptes = comptesData.map((compte) => ({
-      Numero_Compte: compte.Numero_Compte,
-      Libelle_Compte: compte.Libelle_Compte,
-      Periode: compte.Periode,
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(listeComptes);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Liste des Comptes");
-    XLSX.writeFile(
-      wb,
-      `liste_comptes_${new Date().toISOString().split("T")[0]}.xlsx`
-    );
-  };
-
-  const downloadListeComptesJSON = () => {
-    const listeComptes = comptesData.map((compte) => ({
-      Numero_Compte: compte.Numero_Compte,
-      Libelle_Compte: compte.Libelle_Compte,
-      Periode: compte.Periode,
-    }));
-
-    const json = JSON.stringify(listeComptes, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `liste_comptes_${new Date().toISOString().split("T")[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const downloadExcelTransactions = () => {
-    const ws = XLSX.utils.json_to_sheet(allTransactions);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Transactions");
-    XLSX.writeFile(
-      wb,
-      `transactions_comptes_${new Date().toISOString().split("T")[0]}.xlsx`
-    );
-  };
-
   const downloadExcelComplete = () => {
     const flatData: any[] = [];
     comptesData.forEach((compte) => {
@@ -436,123 +391,63 @@ const GrandLivreComptesApp: React.FC = () => {
                   </button>
 
                   <button
-                    onClick={downloadExcelTransactions}
-                    className="bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <FileText className="w-5 h-5" />
-                    Excel transactions
-                  </button>
-
-                  <button
                     onClick={downloadExcelComplete}
                     className="bg-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
                   >
                     <Download className="w-5 h-5" />
                     Excel complet
                   </button>
-
-                  <button
-                    onClick={downloadListeComptes}
-                    className="bg-orange-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-orange-700 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <FileText className="w-5 h-5" />
-                    Liste Comptes (Excel)
-                  </button>
-
-                  <button
-                    onClick={downloadListeComptesJSON}
-                    className="bg-amber-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-amber-700 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <FileJson className="w-5 h-5" />
-                    Liste Comptes (JSON)
-                  </button>
                 </div>
-
-                <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-auto">
-                  <h3 className="font-medium text-gray-700 mb-3">
-                    Aperçu des comptes :
-                  </h3>
-                  {comptesData.slice(0, 5).map((compte, idx) => (
-                    <div
-                      key={idx}
-                      className="mb-4 p-3 bg-white rounded border border-gray-200"
-                    >
-                      <p className="text-sm font-semibold text-emerald-700">
-                        {compte.Numero_Compte} - {compte.Libelle_Compte}
-                      </p>
-                      <p className="text-xs text-gray-600 mt-1">
-                        <span className="font-medium">Période:</span>{" "}
-                        {compte.Periode} |
-                        <span className="font-medium"> Transactions:</span>{" "}
-                        {compte.Transactions.length}
-                      </p>
-                      {compte.Transactions.slice(0, 2).map((trans, tidx) => (
-                        <div
-                          key={tidx}
-                          className="text-xs text-gray-400 ml-3 mt-1"
-                        >
-                          • {trans.Date} - {trans.Code_Journal} -{" "}
-                          {trans.Libelle_Ecriture.substring(0, 35)}
-                          {trans.Libelle_Ecriture.length > 35 ? "..." : ""}
-                          {trans.Debit > 0 && ` (D: ${trans.Debit})`}
-                          {trans.Credit > 0 && ` (C: ${trans.Credit})`}
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                  {comptesData.length > 5 && (
-                    <p className="text-sm text-gray-500 text-center mt-2">
-                      ... et {comptesData.length - 5} autres comptes
-                    </p>
-                  )}
+                {/* Example Output */}
+                <div className="mt-4 bg-indigo-50 rounded-xl shadow-lg p-6">
+                  <h2 className="text-lg font-semibold text-gray-800 mb-3">
+                    Exemple de sortie JSON
+                  </h2>
+                  <pre className="bg-gray-900 text-green-400 p-4 rounded-lg text-xs overflow-x-auto">
+                    {`[
+                        {
+                          "Numero_Compte": "101300",
+                          "Libelle_Compte": "Capital scrit, app., vers non amort",
+                          "Periode": "202412",
+                          "Transactions": [
+                            {
+                              "Date_GL": "31/12/2024",
+                              "Entite": "ENVOL",
+                              "Compte": "101300",
+                              "Date": "01/01/2024",
+                              "Code_Journal": "RAN",
+                              "Numero_Piece": "915",
+                              "Libelle_Ecriture": "RAN 2023",
+                              "Debit": 0,
+                              "Credit": 1050000,
+                              "Solde": -1050000
+                            }
+                          ]
+                        },
+                        {
+                          "Numero_Compte": "111000",
+                          "Libelle_Compte": "Réserve Légale",
+                          "Periode": "202412",
+                          "Transactions": [
+                            {
+                              "Date_GL": "31/12/2024",
+                              "Entite": "ENVOL",
+                              "Compte": "111000",
+                              "Date": "01/01/2024",
+                              "Code_Journal": "RAN",
+                              "Numero_Piece": "915",
+                              "Libelle_Ecriture": "RAN 2023",
+                              "Debit": 0,
+                              "Credit": 210000,
+                              "Solde": -210000
+                            }
+                          ]
+                        },
+                    ]`}
+                  </pre>
                 </div>
               </div>
             )}
-          </div>
-        </div>
-
-        <div className="mt-6 bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-3">
-            Structure détectée
-          </h2>
-          <div className="space-y-2 text-sm text-gray-600">
-            <p>
-              <strong>✓ Comptes :</strong> Ligne avec numéro (6 chiffres) +
-              libellé
-            </p>
-            <p>
-              <strong>✓ Transactions :</strong> Lignes avec date DDMMYY + code
-              journal
-            </p>
-            <p>
-              <strong>✓ Colonnes :</strong> Date | Code Journal | N° Pièce |
-              Libellé | Débit | Crédit | Solde
-            </p>
-            <p>
-              <strong>✓ Formats de sortie :</strong>
-            </p>
-            <ul className="ml-6 mt-1 space-y-1">
-              <li>
-                <span className="text-blue-600">JSON structuré</span> -
-                Structure complète avec comptes et transactions imbriquées
-              </li>
-              <li>
-                <span className="text-green-600">Excel transactions</span> -
-                Liste plate de toutes les transactions
-              </li>
-              <li>
-                <span className="text-purple-600">Excel complet</span> -
-                Transactions enrichies avec infos compte
-              </li>
-              <li>
-                <span className="text-orange-600">Liste Comptes Excel</span> -
-                Uniquement Numero + Libellé + Période
-              </li>
-              <li>
-                <span className="text-amber-600">Liste Comptes JSON</span> -
-                Uniquement Numero + Libellé + Période (JSON)
-              </li>
-            </ul>
           </div>
         </div>
       </div>

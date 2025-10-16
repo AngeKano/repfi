@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import * as XLSX from "xlsx";
 import {
   Upload,
-  Download,
   FileSpreadsheet,
   AlertCircle,
   CheckCircle,
@@ -215,20 +214,6 @@ function CodesJournauxApp() {
     URL.revokeObjectURL(url);
   };
 
-  const downloadJSONSimple = () => {
-    // Version simplifiée sans métadonnées
-    const json = JSON.stringify(codesJournaux, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `codes_journaux_simple_${
-      new Date().toISOString().split("T")[0]
-    }.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const downloadExcel = () => {
     const ws = XLSX.utils.json_to_sheet(codesJournaux);
     const wb = XLSX.utils.book_new();
@@ -239,65 +224,6 @@ function CodesJournauxApp() {
         new Date().toISOString().split("T")[0]
       }.xlsx`
     );
-  };
-
-  const downloadExcelComplet = () => {
-    // Version avec métadonnées dans une feuille séparée
-    const wb = XLSX.utils.book_new();
-
-    // Feuille des codes journaux
-    const wsJournaux = XLSX.utils.json_to_sheet(codesJournaux);
-    XLSX.utils.book_append_sheet(wb, wsJournaux, "Codes Journaux");
-
-    // Feuille des métadonnées
-    if (metaData) {
-      const metaArray = [
-        ["Propriété", "Valeur"],
-        ["Entité", metaData.Entite],
-        ["Date d'extraction", metaData.DateExtraction],
-        ["Nombre de journaux", metaData.NombreJournaux],
-      ];
-      const wsMeta = XLSX.utils.aoa_to_sheet(metaArray);
-      XLSX.utils.book_append_sheet(wb, wsMeta, "Informations");
-    }
-
-    XLSX.writeFile(
-      wb,
-      `codes_journaux_complet_${metaData?.Entite || "export"}_${
-        new Date().toISOString().split("T")[0]
-      }.xlsx`
-    );
-  };
-
-  const downloadCSV = () => {
-    // Conversion en CSV pour compatibilité maximale
-    const ws = XLSX.utils.json_to_sheet(codesJournaux);
-    const csv = XLSX.utils.sheet_to_csv(ws, { FS: ";", RS: "\n" });
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `codes_journaux_${metaData?.Entite || "export"}_${
-      new Date().toISOString().split("T")[0]
-    }.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // Fonction pour obtenir la couleur selon le type
-  const getTypeColor = (type: string) => {
-    switch (type.toLowerCase()) {
-      case "trésorerie":
-        return "text-blue-600 bg-blue-50";
-      case "achats":
-        return "text-green-600 bg-green-50";
-      case "ventes":
-        return "text-purple-600 bg-purple-50";
-      case "général":
-        return "text-gray-600 bg-gray-50";
-      default:
-        return "text-gray-600 bg-gray-50";
-    }
   };
 
   return (
@@ -414,15 +340,6 @@ function CodesJournauxApp() {
                     <FileJson className="w-5 h-5" />
                     JSON complet
                   </button>
-
-                  <button
-                    onClick={downloadJSONSimple}
-                    className="bg-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <FileJson className="w-5 h-5" />
-                    JSON simple
-                  </button>
-
                   <button
                     onClick={downloadExcel}
                     className="bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
@@ -430,210 +347,39 @@ function CodesJournauxApp() {
                     <FileText className="w-5 h-5" />
                     Excel standard
                   </button>
-
-                  <button
-                    onClick={downloadExcelComplet}
-                    className="bg-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Download className="w-5 h-5" />
-                    Excel complet
-                  </button>
-
-                  <button
-                    onClick={downloadCSV}
-                    className="bg-orange-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-orange-700 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <FileText className="w-5 h-5" />
-                    CSV (;)
-                  </button>
                 </div>
 
-                {/* Data Preview */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-medium text-gray-700 mb-3">
-                    Aperçu des codes journaux :
-                  </h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left py-2 px-3 font-medium text-gray-700">
-                            Code
-                          </th>
-                          <th className="text-left py-2 px-3 font-medium text-gray-700">
-                            Intitulé
-                          </th>
-                          <th className="text-left py-2 px-3 font-medium text-gray-700">
-                            Type
-                          </th>
-                          <th className="text-left py-2 px-3 font-medium text-gray-700">
-                            Compte Trésorerie
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {codesJournaux.map((journal, idx) => (
-                          <tr
-                            key={idx}
-                            className="border-b border-gray-100 hover:bg-white transition-colors"
-                          >
-                            <td className="py-2 px-3 font-mono text-blue-600">
-                              {journal.Code}
-                            </td>
-                            <td className="py-2 px-3">
-                              {journal.Intitule_journal}
-                            </td>
-                            <td className="py-2 px-3">
-                              <span
-                                className={`inline-block px-2 py-1 rounded text-xs font-medium ${getTypeColor(
-                                  journal.Type
-                                )}`}
-                              >
-                                {journal.Type}
-                              </span>
-                            </td>
-                            <td className="py-2 px-3 font-mono text-gray-600">
-                              {journal.Compte_tresorerie || "-"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Statistics */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {Object.entries(
-                    codesJournaux.reduce((acc, j) => {
-                      const type = j.Type || "Autre";
-                      acc[type] = (acc[type] || 0) + 1;
-                      return acc;
-                    }, {} as Record<string, number>)
-                  ).map(([type, count]) => (
-                    <div
-                      key={type}
-                      className="bg-white border border-gray-200 rounded-lg p-3 text-center"
-                    >
-                      <p className="text-2xl font-bold text-gray-800">
-                        {count}
-                      </p>
-                      <p className="text-sm text-gray-600">{type}</p>
-                    </div>
-                  ))}
+                {/* Example Output */}
+                <div className="mt-4 bg-indigo-50 rounded-xl shadow-lg p-6">
+                  <h2 className="text-lg font-semibold text-gray-800 mb-3">
+                    Exemple de sortie JSON
+                  </h2>
+                  <pre className="bg-gray-900 text-green-400 p-4 rounded-lg text-xs overflow-x-auto">
+                    {`{
+                        "meta": {
+                          "Entite": "ENVOL",
+                          "DateExtraction": "13/10/25",
+                          "NombreJournaux": 7
+                        },
+                        "codes_journaux": [
+                          {
+                            "Code": "ACH",
+                            "Intitule_journal": "ACHATS",
+                            "Type": "Achats",
+                            "Compte_tresorerie": ""
+                          },
+                          {
+                            "Code": "BQUE",
+                            "Intitule_journal": "BANQUE",
+                            "Type": "Trésorerie",
+                            "Compte_tresorerie": "521200"
+                          },
+                        ]
+                      }`}
+                  </pre>
                 </div>
               </div>
             )}
-          </div>
-        </div>
-
-        {/* Instructions */}
-        <div className="mt-6 bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-3">
-            Structure attendue du fichier
-          </h2>
-          <div className="space-y-2 text-sm text-gray-600">
-            <p>
-              <strong>✓ Format :</strong> Fichier Excel exporté depuis Sage
-              Comptabilité
-            </p>
-            <p>
-              <strong>✓ En-tête :</strong> Ligne contenant "Code", "Intitulé",
-              "Type", "N° compte trésorerie"
-            </p>
-            <p>
-              <strong>✓ Données :</strong> Chaque ligne représente un code
-              journal avec ses propriétés
-            </p>
-            <p>
-              <strong>✓ Colonnes extraites :</strong>
-            </p>
-            <ul className="ml-6 mt-1 space-y-1">
-              <li>
-                • <span className="font-mono text-blue-600">Code</span> - Code
-                du journal (ACH, BQUE, etc.)
-              </li>
-              <li>
-                •{" "}
-                <span className="font-mono text-blue-600">
-                  Intitule_journal
-                </span>{" "}
-                - Libellé complet du journal
-              </li>
-              <li>
-                • <span className="font-mono text-blue-600">Type</span> - Type
-                de journal (Achats, Ventes, Trésorerie, Général, etc.)
-              </li>
-              <li>
-                •{" "}
-                <span className="font-mono text-blue-600">
-                  Compte_tresorerie
-                </span>{" "}
-                - Numéro de compte associé (optionnel pour les journaux de
-                trésorerie)
-              </li>
-            </ul>
-            <p className="mt-3">
-              <strong>✓ Formats de sortie disponibles :</strong>
-            </p>
-            <ul className="ml-6 mt-1 space-y-1">
-              <li>
-                <span className="text-blue-600">• JSON complet</span> - Inclut
-                toutes les propriétés avec métadonnées
-              </li>
-              <li>
-                <span className="text-indigo-600">• JSON simple</span> -
-                Uniquement la liste des codes journaux au format épuré
-              </li>
-              <li>
-                <span className="text-green-600">• Excel standard</span> -
-                Feuille unique avec la table des codes journaux
-              </li>
-              <li>
-                <span className="text-purple-600">• Excel complet</span> - Deux
-                feuilles : codes journaux et informations de l'extraction
-              </li>
-              <li>
-                <span className="text-orange-600">• CSV</span> - Tableau à plat
-                avec séparateur point-virgule (compatible Excel et autres
-                outils)
-              </li>
-            </ul>
-            <div className="mt-4">
-              <p className="text-gray-800 font-medium mb-2">
-                Exemple d'entrée brute attendue :
-              </p>
-              <div className="bg-gray-100 rounded p-3 text-xs font-mono overflow-x-auto">
-                {`Code;Intitulé;Type;N° compte trésorerie
-ACH;Achats;Achats;
-BQ01;Banque Société Générale;Trésorerie;512000
-VTES;Ventes France;Ventes;
-OD;Opérations diverses;Général;
-`}
-              </div>
-            </div>
-            <div className="mt-2">
-              <p className="text-gray-800 font-medium mb-2">
-                Exemple de transformation obtenue :
-              </p>
-              <div className="bg-gray-100 rounded p-3 text-xs font-mono overflow-x-auto">
-                {`[
-  {
-    "Code": "ACH",
-    "Intitule_journal": "Achats",
-    "Type": "Achats",
-    "Compte_tresorerie": ""
-  },
-  {
-    "Code": "BQ01",
-    "Intitule_journal": "Banque Société Générale",
-    "Type": "Trésorerie",
-    "Compte_tresorerie": "512000"
-  }
-  // ...
-]`}
-              </div>
-            </div>
           </div>
         </div>
       </div>
