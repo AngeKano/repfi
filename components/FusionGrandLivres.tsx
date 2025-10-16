@@ -255,9 +255,7 @@ const FusionGrandLivresApp: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `grand_livre_${
-      new Date().toISOString().split("T")[0]
-    }.json`;
+    a.download = `grand_livre_${new Date().toISOString().split("T")[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -481,81 +479,60 @@ const FusionGrandLivresApp: React.FC = () => {
                     Télécharger Excel
                   </button>
                 </div>
-
-                <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-auto">
-                  <h3 className="font-medium text-gray-700 mb-3">
-                    Aperçu des comptes enrichis :
-                  </h3>
-                  {comptesEnrichis.slice(0, 3).map((compte, idx) => (
-                    <div
-                      key={idx}
-                      className="mb-4 p-3 bg-white rounded border border-gray-200"
-                    >
-                      <p className="text-sm font-semibold text-violet-700">
-                        {compte.Numero_Compte} - {compte.Libelle_Compte}
-                      </p>
-                      <p className="text-xs text-gray-600 mt-1">
-                        {compte.Transactions.length} transaction(s)
-                      </p>
-                      {compte.Transactions.slice(0, 2).map((trans, tidx) => (
-                        <div
-                          key={tidx}
-                          className="text-xs mt-2 ml-3 p-2 bg-gray-50 rounded"
-                        >
-                          <p className="text-gray-700">
-                            {trans.Date} - {trans.Code_Journal} -{" "}
-                            {trans.Libelle_Ecriture.substring(0, 30)}
-                          </p>
-                          {trans.Compte_tiers && (
-                            <p className="text-violet-600 mt-1">
-                              → Tiers: {trans.Compte_tiers} -{" "}
-                              {trans.Intitule_du_tiers}
-                            </p>
-                          )}
-                          <p
-                            className={`mt-1 ${
-                              trans.Statut_Jointure === "Trouvé"
-                                ? "text-green-600"
-                                : "text-orange-600"
-                            }`}
-                          >
-                            Statut: {trans.Statut_Jointure}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
               </div>
             )}
-          </div>
-        </div>
 
-        <div className="mt-6 bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-3">
-            Comment ça fonctionne ?
-          </h2>
-          <div className="space-y-2 text-sm text-gray-600">
-            <p>
-              <strong>✓ Jointure :</strong> Basée sur Date + Code_Journal +
-              Numero_Piece + Libelle_Ecriture
-            </p>
-            <p>
-              <strong>✓ Validation :</strong> Vérification automatique de la
-              conformité des attributs
-            </p>
-            <p>
-              <strong>✓ Enrichissement :</strong> Ajout de Compte_tiers,
-              Intitule_du_tiers, Type, Centralisateur
-            </p>
-            <p>
-              <strong>✓ Statistiques :</strong> Nombre de transactions avec/sans
-              tiers trouvés
-            </p>
-            <p>
-              <strong>✓ Formats :</strong> Export JSON (structuré) et Excel
-              (plat)
-            </p>
+            {/* Example Output */}
+            <div className="mt-4 bg-indigo-50 rounded-xl shadow-lg p-6">
+              <h2 className="text-lg font-semibold text-gray-800 mb-3">
+                Exemple de sortie JSON
+              </h2>
+              <pre className="bg-gray-900 text-green-400 p-4 rounded-lg text-xs overflow-x-auto">
+                {`
+                        [
+  {
+    "Numero_Compte": "101300",
+    "Libelle_Compte": "Capital scrit, app., vers non amort",
+    "Periode": "202412",
+    "Transactions": [
+      {
+        "Date_GL": "31/12/2024",
+        "Entite": "ENVOL",
+        "Compte": "101300",
+        "Date": "01/01/2024",
+        "Code_Journal": "RAN",
+        "Numero_Piece": "915",
+        "Libelle_Ecriture": "RAN 2023",
+        "Debit": 0,
+        "Credit": 1050000,
+        "Solde": -1050000,
+        "Statut_Jointure": "Non trouvé"
+      }
+    ]
+  },
+  {
+    "Numero_Compte": "111000",
+    "Libelle_Compte": "Réserve Légale",
+    "Periode": "202412",
+    "Transactions": [
+      {
+        "Date_GL": "31/12/2024",
+        "Entite": "ENVOL",
+        "Compte": "111000",
+        "Date": "01/01/2024",
+        "Code_Journal": "RAN",
+        "Numero_Piece": "915",
+        "Libelle_Ecriture": "RAN 2023",
+        "Debit": 0,
+        "Credit": 210000,
+        "Solde": -210000,
+        "Statut_Jointure": "Non trouvé"
+      }
+    ]
+  },
+                    ]`}
+              </pre>
+            </div>
           </div>
         </div>
       </div>

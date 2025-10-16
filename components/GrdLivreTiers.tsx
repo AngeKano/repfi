@@ -305,25 +305,7 @@ const GrandLivreTiersApp: React.FC = () => {
     a.click();
     URL.revokeObjectURL(url);
   };
-
-  const downloadListeTiers = () => {
-    const listeTiers = tiersData.map((tiers) => ({
-      Compte_tiers: tiers.Compte_tiers,
-      Type: tiers.Type,
-      Intitule_du_tiers: tiers.Intitule_du_tiers,
-      Centralisateur: tiers.Centralisateur,
-      Periode: tiers.Periode,
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(listeTiers);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Liste des Tiers");
-    XLSX.writeFile(
-      wb,
-      `liste_tiers_${new Date().toISOString().split("T")[0]}.xlsx`
-    );
-  };
-
+  
   const downloadListeTiersJSON = () => {
     const listeTiers = tiersData.map((tiers) => ({
       Compte_tiers: tiers.Compte_tiers,
@@ -541,13 +523,6 @@ const GrandLivreTiersApp: React.FC = () => {
                     Excel complet
                   </button>
                   <button
-                    onClick={downloadListeTiers}
-                    className="bg-orange-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-orange-700 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <FileText className="w-5 h-5" />
-                    Liste Tiers (Excel)
-                  </button>
-                  <button
                     onClick={downloadListeTiersJSON}
                     className="bg-amber-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-amber-700 transition-colors flex items-center justify-center gap-2"
                   >
@@ -555,23 +530,36 @@ const GrandLivreTiersApp: React.FC = () => {
                     Liste Tiers (JSON)
                   </button>
                 </div>
-
-                <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-auto">
-                  <h3 className="font-medium text-gray-700 mb-3">Aperçu :</h3>
-                  {tiersData.slice(0, 5).map((tiers, idx) => (
-                    <div key={idx} className="mb-4 p-3 bg-white rounded border">
-                      <p className="text-sm font-semibold text-indigo-700">
-                        {tiers.Compte_tiers} - {tiers.Intitule_du_tiers}
-                      </p>
-                      <p className="text-xs text-gray-600 mt-1">
-                        Type: {tiers.Type} | Centralisateur:{" "}
-                        {tiers.Centralisateur}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {tiers.Transactions.length} transaction(s)
-                      </p>
-                    </div>
-                  ))}
+                {/* Example Output */}
+                <div className="mt-4 bg-indigo-50 rounded-xl shadow-lg p-6">
+                  <h2 className="text-lg font-semibold text-gray-800 mb-3">
+                    Exemple de sortie JSON
+                  </h2>
+                  <pre className="bg-gray-900 text-green-400 p-4 rounded-lg text-xs overflow-x-auto">
+                    {`[
+  {
+    "Compte_tiers": "401000",
+    "Type": "Fournisseur",
+    "Intitule_du_tiers": "FOURNISSEURS DIVERS",
+    "Centralisateur": "401100",
+    "Periode": "202412",
+    "Transactions": [
+      {
+        "Date_GL": "31/12/2024",
+        "Entite": "ENVOL",
+        "Compte": "401000",
+        "Date": "01/01/2024",
+        "Code_Journal": "RAN",
+        "Numero_Piece": "915",
+        "Libelle_Ecriture": "RAN 2023",
+        "Debit": 0,
+        "Credit": 4454,
+        "Solde": -4454
+      }
+    ]
+  },
+                    ]`}
+                  </pre>
                 </div>
               </div>
             )}
