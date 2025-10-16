@@ -38,6 +38,25 @@ export default function Home() {
             Fusion Grand Livres
           </a>
         </li>
+
+        <li>
+          <a
+            href="/cd-journeaux"
+            className="inline-block px-8 py-4 rounded-3xl bg-purple-400 text-white font-semibold text-base no-underline shadow-lg transition-transform duration-200 hover:scale-105 focus:scale-105 animate-popIn"
+            style={{ animationDelay: "1s", animationFillMode: "both" }}
+          >
+            Code Journeaux
+          </a>
+        </li>
+        <li>
+          <a
+            href="/pl-comptable"
+            className="inline-block px-8 py-4 rounded-3xl bg-cyan-600 text-white font-semibold text-base no-underline shadow-lg transition-transform duration-200 hover:scale-105 focus:scale-105 animate-popIn"
+            style={{ animationDelay: "1s", animationFillMode: "both" }}
+          >
+            Plan Comptable
+          </a>
+        </li>
       </ul>
     </main>
   );
