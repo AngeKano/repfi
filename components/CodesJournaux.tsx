@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 export interface CodeJournal {
-  Code: string;
+  Code_journal: string;
   Intitule_journal: string;
   Type: string;
   Compte_tresorerie: string;
@@ -138,14 +138,14 @@ function CodesJournauxApp() {
 
       // Extraction des données selon la structure observée
       const journal: CodeJournal = {
-        Code: code,
+        Code_journal: code,
         Intitule_journal: String(row[1] || "").trim(),
         Type: String(row[6] || row[7] || "").trim(),
         Compte_tresorerie: String(row[8] || row[9] || "").trim(),
       };
 
       // Ajouter seulement si on a au moins le code et l'intitulé
-      if (journal.Code && journal.Intitule_journal) {
+      if (journal.Code_journal && journal.Intitule_journal) {
         parsedJournaux.push(journal);
       }
     }
