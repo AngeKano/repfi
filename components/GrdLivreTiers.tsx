@@ -11,63 +11,10 @@ import {
   FileText,
   Info,
 } from "lucide-react";
-
-export interface Transaction {
-  Date_GL: string;
-  Entite: string;
-  Compte: string;
-  Date: string;
-  Code_Journal: string;
-  Numero_Piece: string;
-  Libelle_Ecriture: string;
-  Debit: number;
-  Credit: number;
-  Solde: number;
-}
-
-// Compte tiers	Type	Intitulé du tiers	Centralisateur	Periode
-export interface TiersData {
-  Compte_tiers: string;
-  Type: string;
-  Intitule_du_tiers: string;
-  Centralisateur: string;
-  Periode: string;
-  Transactions: Transaction[];
-}
-
-interface PlanTiers {
-  Compte_tiers: string;
-  Type: string;
-  Intitule_du_tiers: string;
-  Centralisateur: string;
-  Periode: string;
-}
-
-function parseAmount(value: any): number {
-  if (!value) return 0;
-  const strValue = String(value).trim();
-  if (!strValue || strValue === "-" || strValue === "") return 0;
-  // rien à faire ici
-  const cleaned = strValue
-    .replace(/\s/g, "")
-    .replace(/\./g, "")
-    .replace(",", ".");
-  const parsed = parseFloat(cleaned);
-  return isNaN(parsed) ? 0 : parsed;
-}
-
-function formatDate(dateStr: string): string {
-  if (!dateStr) return "";
-  const cleaned = String(dateStr).replace(/\D/g, "");
-  if (cleaned.length === 6) {
-    const day = cleaned.substring(0, 2);
-    const month = cleaned.substring(2, 4);
-    const year = cleaned.substring(4, 6);
-    const fullYear = parseInt(year) > 50 ? `19${year}` : `20${year}`;
-    return `${day}/${month}/${fullYear}`;
-  }
-  return dateStr;
-}
+import { parseAmount } from "@/utils/parse-amount";
+import { formatDate } from "@/utils/parse-date";
+import { PlanTiers, TiersData, Transaction } from "@/utils/type";
+import { handleRetour } from "@/utils/handle-retour";
 
 const GrandLivreTiersApp: React.FC = () => {
   const [fileGrandLivre, setFileGrandLivre] = useState<File | null>(null);
@@ -78,17 +25,6 @@ const GrandLivreTiersApp: React.FC = () => {
   const [planTiersCount, setPlanTiersCount] = useState(0);
   const [error, setError] = useState("");
 
-  const handleRetour = () => {
-    // Si vous souhaitez revenir à une page précédente dans Next.js :
-    if (typeof window !== "undefined") {
-      if (window.history.length > 1) {
-        window.history.back();
-      } else {
-        // Si pas d'historique, redirigez vers la racine
-        window.location.href = "/";
-      }
-    }
-  };
 
   const handleFileGrandLivreUpload = (
     e: React.ChangeEvent<HTMLInputElement>

@@ -11,43 +11,15 @@ import {
   Link2,
   Info,
 } from "lucide-react";
-import { CompteData } from "./GrdLivreCompte";
-import { TiersData } from "./GrdLivreTiers";
-
-interface Transaction {
-  Date_GL: string;
-  Entite: string;
-  Compte: string;
-  Date: string;
-  Code_Journal: string;
-  Numero_Piece: string;
-  Libelle_Ecriture: string;
-  Debit: number;
-  Credit: number;
-  Solde: number;
-}
-
-interface TransactionEnrichie extends Transaction {
-  Compte_tiers?: string;
-  Intitule_du_tiers?: string;
-  Centralisateur?: string;
-  Type?: string;
-  Statut_Jointure: "Trouvé" | "Non trouvé";
-}
-
-interface CompteEnrichi {
-  Numero_Compte: string;
-  Libelle_Compte: string;
-  Periode: string;
-  Transactions: TransactionEnrichie[];
-}
-
-interface Stats {
-  totalTransactionsComptes: number;
-  transactionsAvecTiers: number;
-  transactionsSansTiers: number;
-  comptesTraites: number;
-}
+import {
+  CompteData,
+  CompteEnrichi,
+  Stats,
+  TiersData,
+  Transaction,
+  TransactionEnrichie,
+} from "@/utils/type";
+import { handleRetour } from "@/utils/handle-retour";
 
 const FusionGrandLivresApp: React.FC = () => {
   const [fileComptes, setFileComptes] = useState<File | null>(null);
@@ -56,13 +28,6 @@ const FusionGrandLivresApp: React.FC = () => {
   const [comptesEnrichis, setComptesEnrichis] = useState<CompteEnrichi[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [error, setError] = useState("");
-
-  const handleRetour = () => {
-    // Si vous souhaitez revenir à la page précédente du navigateur :
-    if (typeof window !== "undefined") {
-      window.history.back();
-    }
-  };
 
   const handleFileComptesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
@@ -255,9 +220,7 @@ const FusionGrandLivresApp: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `grand_livre_${
-      new Date().toISOString().split("T")[0]
-    }.json`;
+    a.download = `grand_livre_${new Date().toISOString().split("T")[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
