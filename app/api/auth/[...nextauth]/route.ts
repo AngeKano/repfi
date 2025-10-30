@@ -1,80 +1,127 @@
-import NextAuth from "next-auth";
+// app/api/auth/[...nextauth]/route.ts
+/**
+ * Route NextAuth - Gère signin, signout, session
+ * Endpoint: /api/auth/*
+ */
+
+import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { compare } from "bcrypt";
+import { PrismaClient } from "@prisma/client";
 
-// Extend types for user and session so TypeScript knows about `id` and `type`
-import {
-  User as NextAuthUser,
-  Session as NextAuthSession,
-  DefaultSession,
-  NextAuthOptions,
-} from "next-auth";
-import { JWT } from "next-auth/jwt";
+const prisma = new PrismaClient();
 
-// Type augmentation for JWT tokens and Session user
-export type CustomUser = NextAuthUser & {
-  id: string;
-  type: string;
-};
-export type CustomSessionUser = DefaultSession["user"] & {
-  id?: string;
-  type?: string;
-};
-export type CustomToken = JWT & {
-  type?: string;
-};
-
-const handler = NextAuth({
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
-      name: "credentials",
+      name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+      async authorize(credentials, req) {
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
 
+        // Récupérer l'utilisateur
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: credentials.email.toLowerCase() },
+          include: {
+            company: {
+              select: {
+                id: true,
+                name: true,
+                packType: true,
+              },
+            },
+          },
         });
 
-        if (!user) return null;
+        if (!user) {
+          return null;
+        }
 
-        const isValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
-        if (!isValid) return null;
+        // Vérifier si actif
+        if (!user.isActive) {
+          return null;
+        }
+
+        // Vérifier le mot de passe
+        const isValid = await compare(credentials.password, user.password);
+
+        if (!isValid) {
+          return null;
+        }
+
+        // Mettre à jour lastLoginAt
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastLoginAt: new Date() },
+        });
+
+        // Retourner l'objet utilisateur conforme au type NextAuth User
         return {
           id: user.id,
           email: user.email,
-          name: user.name,
-          type: user.type,
-        } as CustomUser;
+          name:
+            user.firstName && user.lastName
+              ? `${user.firstName} ${user.lastName}`
+              : user.email,
+          firstName: user.firstName ?? undefined,
+          lastName: user.lastName ?? undefined,
+          role: user.role,
+          companyId: user.companyId,
+          companyName: user.company.name,
+          companyPackType: user.company.packType,
+        } as any; // Cast required for NextAuth compatibility
       },
     }),
   ],
-  session: { strategy: "jwt" },
-  pages: { signIn: "/login" },
+
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 jours
+  },
+
+  pages: {
+    signIn: "/auth/signin",
+    signOut: "/auth/signout",
+    error: "/auth/error",
+  },
+
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.type = (user as CustomUser).type;
+        token.role = user.role;
+        token.companyId = user.companyId;
+        token.companyName = user.companyName;
+        token.companyPackType = user.companyPackType;
+        token.firstName = user.firstName;
+        token.lastName = user.lastName;
       }
-      return token as CustomToken;
+      return token;
     },
+
     async session({ session, token }) {
-      if (session.user) {
-        (session.user as CustomSessionUser).id =
-          token.sub ?? (token.id as string);
-        (session.user as CustomSessionUser).type = (token as CustomToken).type;
+      if (token && session.user) {
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
+        session.user.companyId = token.companyId as string;
+        session.user.companyName = token.companyName as string;
+        session.user.companyPackType = token.companyPackType as string;
+        session.user.firstName = token.firstName as string;
+        session.user.lastName = token.lastName as string;
       }
       return session;
     },
   },
-});
+
+  secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === "development",
+};
+
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
