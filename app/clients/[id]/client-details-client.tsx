@@ -28,6 +28,7 @@ import {
   Download,
 } from "lucide-react";
 import Link from "next/link";
+import UploadFilesDialog from "@/components/files/upload-files-dialog";
 
 interface ClientDetailsClientProps {
   session: any;
@@ -41,6 +42,8 @@ export default function ClientDetailsClient({
   const router = useRouter();
   const [client, setClient] = useState(initialClient);
   const [loading, setLoading] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+
   const [error, setError] = useState("");
 
   const canEdit =
@@ -444,11 +447,9 @@ export default function ClientDetailsClient({
                 <Card className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-semibold">Fichiers récents</h2>
-                    <Link href={`/files?clientId=${client.id}`}>
-                      <Button size="sm" variant="outline">
-                        Voir tous les fichiers
-                      </Button>
-                    </Link>
+                    <Button size="sm" onClick={() => setUploadDialogOpen(true)}>
+                      Uploader des fichiers
+                    </Button>
                   </div>
 
                   {client.recentFiles && client.recentFiles.length > 0 ? (
@@ -480,11 +481,24 @@ export default function ClientDetailsClient({
                                   : "secondary"
                               }
                             >
-                              {file.status}
+                              {file.status === "EN_COURS"
+                                ? "En cours"
+                                : file.status}
                             </Badge>
-                            <Button size="sm" variant="ghost">
-                              <Download className="w-4 h-4" />
-                            </Button>
+                            {file.status === "ERROR" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={async () => {
+                                  await fetch(`/api/files/${file.id}/retry`, {
+                                    method: "PUT",
+                                  });
+                                  router.refresh();
+                                }}
+                              >
+                                Relancer
+                              </Button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -493,15 +507,23 @@ export default function ClientDetailsClient({
                     <div className="text-center py-12">
                       <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                       <p className="text-gray-500">Aucun fichier</p>
-                      <Link href="/files/upload">
-                        <Button variant="outline" className="mt-4">
-                          Uploader des fichiers
-                        </Button>
-                      </Link>
+                      <Button
+                        variant="outline"
+                        className="mt-4"
+                        onClick={() => setUploadDialogOpen(true)}
+                      >
+                        Uploader des fichiers
+                      </Button>
                     </div>
                   )}
                 </Card>
               </TabsContent>
+              <UploadFilesDialog
+                open={uploadDialogOpen}
+                onOpenChange={setUploadDialogOpen}
+                clientId={client.id}
+                onSuccess={() => router.refresh()}
+              />
             </Tabs>
           </div>
         </div>

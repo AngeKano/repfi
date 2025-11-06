@@ -46,13 +46,34 @@ const createClientSchema = z.object({
     .optional(),
 });
 
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION!,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
+
+async function createClientS3Folder(companyId: string, clientId: string) {
+  const bucketName = process.env.AWS_S3_BUCKET_NAME!;
+
+  await s3Client.send(
+    new PutObjectCommand({
+      Bucket: bucketName,
+      Key: `${companyId}/${clientId}/`,
+      Body: "",
+    })
+  );
+}
+
 /**
  * GET /api/clients
  * Liste des clients accessibles par l'utilisateur
  */
 export async function GET(req: NextRequest) {
   try {
-    
     const session = await getServerSession(authOptions);
 
     console.log("session?_", session);
@@ -184,15 +205,14 @@ export async function GET(req: NextRequest) {
  * POST /api/clients
  * Créer un nouveau client
  */
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session?.user) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    // Vérifier les permissions (ADMIN ou ADMIN_ROOT uniquement)
     if (session.user.role === "USER") {
       return NextResponse.json(
         { error: "Permissions insuffisantes" },
@@ -200,7 +220,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Vérifier le pack (ENTREPRISE uniquement)
     if (session.user.companyPackType !== "ENTREPRISE") {
       return NextResponse.json(
         {
@@ -213,7 +232,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = createClientSchema.parse(body);
 
-    // Vérifier si l'email existe déjà dans cette entreprise
     const existingClient = await prisma.client.findFirst({
       where: {
         email: data.email,
@@ -228,7 +246,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Créer le client
     const client = await prisma.client.create({
       data: {
         name: data.name,
@@ -244,7 +261,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Créer les réseaux sociaux si fournis
+    await createClientS3Folder(session.user.companyId, client.id);
+
     if (data.socialNetworks && data.socialNetworks.length > 0) {
       await prisma.socialNetwork.createMany({
         data: data.socialNetworks.map((network) => ({
@@ -255,7 +273,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Récupérer le client complet avec les réseaux sociaux
     const clientWithSocials = await prisma.client.findUnique({
       where: { id: client.id },
       include: {
@@ -280,14 +297,12 @@ export async function POST(req: NextRequest) {
     );
   } catch (error: any) {
     console.error("POST /api/clients error:", error);
-
     if (error.name === "ZodError") {
       return NextResponse.json(
         { error: "Données invalides", details: error.errors },
         { status: 400 }
       );
     }
-
     return NextResponse.json(
       { error: "Erreur lors de la création du client" },
       { status: 500 }

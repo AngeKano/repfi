@@ -236,7 +236,7 @@ async function main() {
   const file2 = await prisma.file.create({
     data: {
       fileName: "20240101_PlanComptable_TechStartup.xlsx",
-      fileType: FileType.PLAN_COMPTES_TIERS,
+      fileType: FileType.PLAN_COMPTES,
       fileYear: 2024,
       s3Key: `${client1.id}/2024/sample_plan_comptable.xlsx`,
       s3Url: `https://example-bucket.s3.eu-west-1.amazonaws.com/${client1.id}/2024/sample_plan_comptable.xlsx`,

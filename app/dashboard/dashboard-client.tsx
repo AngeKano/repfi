@@ -182,12 +182,6 @@ export default function DashboardClient({
                   </Link>
                 )}
 
-              <Link href="/files/upload">
-                <Button className="w-full justify-start" variant="outline">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Uploader des fichiers
-                </Button>
-              </Link>
 
               <Link href="/clients">
                 <Button className="w-full justify-start" variant="outline">

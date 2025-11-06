@@ -1,19 +1,21 @@
 // app/api/auth/signup/route.ts
-/**
- * Route d'inscription - Crée entreprise, admin et client
- * Endpoint: POST /api/auth/signup
- */
-
 import { NextRequest, NextResponse } from 'next/server';
 import { hash } from 'bcrypt';
 import { z } from 'zod';
 import { PrismaClient, CompanyType, PackType } from '@prisma/client';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 const prisma = new PrismaClient();
 
-// Schéma de validation
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION!,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
+
 const signUpSchema = z.object({
-  // Entreprise
   companyName: z.string().min(2).max(100),
   companyEmail: z.string().email().toLowerCase(),
   companyType: z.nativeEnum(CompanyType),
@@ -22,8 +24,6 @@ const signUpSchema = z.object({
   companyWebsite: z.string().url().optional().or(z.literal('')),
   companyDescription: z.string().max(1000).optional(),
   companyDenomination: z.string().max(100).optional(),
-
-  // Admin
   adminEmail: z.string().email().toLowerCase(),
   adminPassword: z.string()
     .min(8)
@@ -36,14 +36,27 @@ const signUpSchema = z.object({
   path: ['adminPasswordConfirm'],
 });
 
+async function createS3Folders(companyId: string, selfEntityId: string) {
+  const bucketName = process.env.AWS_S3_BUCKET_NAME!;
+  
+  await s3Client.send(new PutObjectCommand({
+    Bucket: bucketName,
+    Key: `${companyId}/`,
+    Body: '',
+  }));
+  
+  await s3Client.send(new PutObjectCommand({
+    Bucket: bucketName,
+    Key: `${companyId}/${selfEntityId}/`,
+    Body: '',
+  }));
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-
-    // Validation
     const data = signUpSchema.parse(body);
 
-    // Vérifier email entreprise
     const existingCompany = await prisma.company.findUnique({
       where: { email: data.companyEmail },
     });
@@ -55,7 +68,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Vérifier email admin
     const existingUser = await prisma.user.findUnique({
       where: { email: data.adminEmail },
     });
@@ -67,12 +79,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Hasher le mot de passe
     const hashedPassword = await hash(data.adminPassword, 12);
 
-    // Transaction : créer tout en une fois
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Créer l'entreprise
       const company = await tx.company.create({
         data: {
           name: data.companyName,
@@ -86,7 +95,6 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // 2. Créer l'ADMIN_ROOT
       const admin = await tx.user.create({
         data: {
           email: data.adminEmail,
@@ -107,7 +115,6 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // 3. Créer l'entité "self"
       const selfEntity = await tx.client.create({
         data: {
           name: data.companyName,
@@ -122,6 +129,8 @@ export async function POST(req: NextRequest) {
           createdById: admin.id,
         },
       });
+
+      await createS3Folders(company.id, selfEntity.id);
 
       return {
         company: {
@@ -150,7 +159,6 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('Signup error:', error);
 
-    // Erreur de validation Zod
     if (error.name === 'ZodError') {
       return NextResponse.json(
         { 
@@ -161,7 +169,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Erreur Prisma
     if (error.code === 'P2002') {
       return NextResponse.json(
         { error: 'Email déjà utilisé' },
