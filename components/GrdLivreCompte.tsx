@@ -11,51 +11,10 @@ import {
   FileJson,
   FileText,
 } from "lucide-react";
-
-export interface Transaction {
-  Date_GL: string;
-  Entite: string;
-  Compte: string;
-  Date: string;
-  Code_Journal: string;
-  Numero_Piece: string;
-  Libelle_Ecriture: string;
-  Debit: number;
-  Credit: number;
-  Solde: number;
-}
-
-export interface CompteData {
-  Numero_Compte: string;
-  Libelle_Compte: string;
-  Periode: string;
-  Transactions: Transaction[];
-}
-
-function parseAmount(value: any): number {
-  if (!value) return 0;
-  const strValue = String(value).trim();
-  if (!strValue || strValue === "-" || strValue === "") return 0;
-  const cleaned = strValue
-    .replace(/\s/g, "")
-    .replace(/\./g, "")
-    .replace(",", ".");
-  const parsed = parseFloat(cleaned);
-  return isNaN(parsed) ? 0 : parsed;
-}
-
-function formatDate(dateStr: string): string {
-  if (!dateStr) return "";
-  const cleaned = String(dateStr).replace(/\D/g, "");
-  if (cleaned.length === 6) {
-    const day = cleaned.substring(0, 2);
-    const month = cleaned.substring(2, 4);
-    const year = cleaned.substring(4, 6);
-    const fullYear = parseInt(year) > 50 ? `19${year}` : `20${year}`;
-    return `${day}/${month}/${fullYear}`;
-  }
-  return dateStr;
-}
+import { CompteData, Transaction } from "@/utils/type";
+import { formatDate } from "@/utils/parse-date";
+import { parseAmount } from "@/utils/parse-amount";
+import { handleRetour } from "@/utils/handle-retour";
 
 const GrandLivreComptesApp: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -63,18 +22,6 @@ const GrandLivreComptesApp: React.FC = () => {
   const [comptesData, setComptesData] = useState<CompteData[]>([]);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [error, setError] = useState("");
-
-  const handleRetour = () => {
-    // Si vous souhaitez revenir à une page précédente dans Next.js :
-    if (typeof window !== "undefined") {
-      if (window.history.length > 1) {
-        window.history.back();
-      } else {
-        // Si pas d'historique, redirigez vers la racine
-        window.location.href = "/";
-      }
-    }
-  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
@@ -246,6 +193,8 @@ const GrandLivreComptesApp: React.FC = () => {
       setProcessing(false);
     }
   };
+
+  // Download Feature
 
   const downloadJSON = () => {
     const json = JSON.stringify(comptesData, null, 2);

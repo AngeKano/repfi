@@ -2,43 +2,49 @@ import React from "react";
 
 export default function Home() {
   return (
-    <main className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-50 to-indigo-100 overflow-hidden">
-      <h1 className="text-4xl font-bold mb-6 tracking-wide text-slate-800 animate-fadeInDown">
-        AI Excel Transformer
+    <main className="min-h-screen bg-white flex flex-col items-center justify-center px-4">
+      {/* Illustration */}
+      <div className="mb-4">
+        <svg
+          width="120"
+          height="120"
+          viewBox="0 0 120 120"
+          aria-hidden="true"
+          className="mx-auto"
+        >
+          <rect x="14" y="26" width="92" height="64" rx="10" fill="#EEF2FF" />
+          <rect x="30" y="42" width="60" height="8" rx="4" fill="#6366f1" />
+          <rect x="30" y="56" width="43" height="8" rx="4" fill="#a5b4fc" />
+          <rect x="30" y="70" width="30" height="8" rx="4" fill="#c7d2fe" />
+        </svg>
+      </div>
+      {/* Title */}
+      <h1 className="text-3xl font-semibold text-slate-800 mb-3 text-center">
+        Reporting Financier
       </h1>
-      <p className="text-lg text-slate-700 mb-10 text-center max-w-xl animate-fadeIn">
-        Transformez vos fichiers Excel en un clin d'œil . Choisissez votre outil
-        :
+      {/* Description */}
+      <p className="text-slate-600 text-center mb-8 max-w-md">
+        Présentez facilement vos finances à votre équipe.
+        <br />
+        Analyse rapide & visualisations claires.
+        <br />
+        Conçu pour la simplicité et l’efficacité.
       </p>
-      <ul className="flex gap-8 animate-fadeInUp">
-        <li>
-          <a
-            href="/gl-tiers"
-            className="inline-block px-8 py-4 rounded-3xl bg-indigo-500 text-white font-semibold text-base no-underline shadow-lg transition-transform duration-200 hover:scale-105 focus:scale-105 animate-popIn"
-            style={{ animationDelay: "0.6s", animationFillMode: "both" }}
-          >
-            Grand Livre Tiers
-          </a>
-        </li>
-        <li>
-          <a
-            href="/gl-comptes"
-            className="inline-block px-8 py-4 rounded-3xl bg-emerald-500 text-white font-semibold text-base no-underline shadow-lg transition-transform duration-200 hover:scale-105 focus:scale-105 animate-popIn"
-            style={{ animationDelay: "0.8s", animationFillMode: "both" }}
-          >
-            Grand Livre Comptes
-          </a>
-        </li>
-        <li>
-          <a
-            href="/gl-fusion"
-            className="inline-block px-8 py-4 rounded-3xl bg-orange-400 text-white font-semibold text-base no-underline shadow-lg transition-transform duration-200 hover:scale-105 focus:scale-105 animate-popIn"
-            style={{ animationDelay: "1s", animationFillMode: "both" }}
-          >
-            Fusion Grand Livres
-          </a>
-        </li>
-      </ul>
+      {/* Call-to-action buttons */}
+      <div className="flex gap-4">
+        <a
+          href="/auth/signin"
+          className="px-6 py-2 rounded-md bg-slate-900 text-white font-medium text-sm shadow-sm hover:bg-slate-800 transition"
+        >
+          Connexion
+        </a>
+        <a
+          href="/auth/signup"
+          className="px-6 py-2 rounded-md border border-slate-200 bg-white text-slate-900 font-medium text-sm shadow-sm hover:bg-slate-100 transition"
+        >
+          Créer une entreprise
+        </a>
+      </div>
     </main>
   );
 }
