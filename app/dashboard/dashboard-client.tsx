@@ -182,7 +182,6 @@ export default function DashboardClient({
                   </Link>
                 )}
 
-
               <Link href="/clients">
                 <Button className="w-full justify-start" variant="outline">
                   <FolderOpen className="w-4 h-4 mr-2" />
@@ -286,11 +285,11 @@ export default function DashboardClient({
             <h3 className="text-lg font-semibold text-gray-900">
               Fichiers récents
             </h3>
-            <Link href="/files">
+            {/* <Link href="/files">
               <Button variant="ghost" size="sm">
                 Voir tout
               </Button>
-            </Link>
+            </Link> */}
           </div>
 
           {recentFiles.length === 0 ? (
