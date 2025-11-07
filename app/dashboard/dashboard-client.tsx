@@ -285,10 +285,11 @@ export default function DashboardClient({
             <h3 className="text-lg font-semibold text-gray-900">
               Fichiers récents
             </h3>
-            {/* Bouton désactivé pour lister tous les fichiers */}
-            <Button variant="ghost" size="sm" disabled>
-              Voir tout
-            </Button>
+            <Link href="/files">
+              <Button variant="ghost" size="sm">
+                Voir tout Pas
+              </Button>
+            </Link>
           </div>
 
           {recentFiles.length === 0 ? (
