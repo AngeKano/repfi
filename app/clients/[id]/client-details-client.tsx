@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import UploadFilesDialog from "@/components/files/upload-files-dialog";
+import { toast } from "sonner";
 
 interface ClientDetailsClientProps {
   session: any;
@@ -72,6 +73,33 @@ export default function ClientDetailsClient({
     } catch (err: any) {
       setError(err.message || "Erreur lors de la suppression");
       setLoading(false);
+    }
+  };
+
+  const handleDownload = async (fileId: string, fileName: string) => {
+    try {
+      // Appeler l'API pour obtenir l'URL signée
+      const response = await fetch(`/api/files/download/${fileId}`);
+
+      if (!response.ok) {
+        throw new Error("Erreur lors du téléchargement");
+      }
+
+      const data = await response.json();
+
+      // Télécharger le fichier avec l'URL signée
+      const link = document.createElement("a");
+      link.href = data.url;
+      link.download = fileName;
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success("Téléchargement démarré");
+    } catch (error) {
+      console.error("Erreur téléchargement:", error);
+      toast.error("Erreur lors du téléchargement du fichier");
     }
   };
 
@@ -497,6 +525,18 @@ export default function ClientDetailsClient({
                                 }}
                               >
                                 Relancer
+                              </Button>
+                            )}
+
+                            {file.status === "SUCCES" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  handleDownload(file.id, file.fileName)
+                                }
+                              >
+                                <Download className="w-4 h-4" />
                               </Button>
                             )}
                           </div>

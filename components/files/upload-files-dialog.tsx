@@ -66,6 +66,125 @@ export default function UploadFilesDialog({
     );
   };
 
+  const detectFileType = (fileName: string): FileType | undefined => {
+    // Normaliser le nom du fichier (minuscules, retirer les chiffres et caractères spéciaux)
+    const normalizedName = fileName
+      .toLowerCase()
+      .replace(/[0-9_\-\.]/g, " ")
+      .trim();
+
+    // Définir les mots-clés pour chaque type de fichier
+    const keywords = {
+      GRAND_LIVRE_COMPTES: [
+        "grand",
+        "livre",
+        "livres",
+        "compte",
+        "comptes",
+        "gl",
+        "glcompte",
+        "glcomptes",
+        "grandlivre",
+        "grandlivrecompte",
+        "grandlivrecomptes",
+      ],
+      GRAND_LIVRE_TIERS: [
+        "grand",
+        "livre",
+        "livres",
+        "tiers",
+        "tier",
+        "gl",
+        "gltiers",
+        "gltier",
+        "grandlivretiers",
+        "grandlivretier",
+      ],
+      PLAN_COMPTES: [
+        "plan",
+        "compte",
+        "comptes",
+        "cmpt",
+        "pl",
+        "plcompte",
+        "plcomptes",
+        "plancompte",
+        "plancomptes",
+      ],
+      PLAN_TIERS: [
+        "plan",
+        "tiers",
+        "tier",
+        "trs",
+        "pl",
+        "pltiers",
+        "pltier",
+        "plantiers",
+        "plantier",
+      ],
+      CODE_JOURNAL: [
+        "code",
+        "journal",
+        "journaux",
+        "journeau",
+        "cd",
+        "cj",
+        "codejournal",
+        "codejournaux",
+        "cdjournal",
+      ],
+    };
+
+    // Fonction pour vérifier si le nom contient les mots-clés d'un type
+    const matchesType = (type: FileType, words: string[]): number => {
+      let score = 0;
+      words.forEach((word) => {
+        if (normalizedName.includes(word)) {
+          score += word.length; // Score basé sur la longueur du mot pour privilégier les matches plus spécifiques
+        }
+      });
+      return score;
+    };
+
+    // Calculer le score pour chaque type
+    const scores: { type: FileType; score: number }[] = [
+      {
+        type: "GRAND_LIVRE_COMPTES" as FileType,
+        score: matchesType(
+          "GRAND_LIVRE_COMPTES" as FileType,
+          keywords.GRAND_LIVRE_COMPTES
+        ),
+      },
+      {
+        type: "GRAND_LIVRE_TIERS" as FileType,
+        score: matchesType(
+          "GRAND_LIVRE_TIERS" as FileType,
+          keywords.GRAND_LIVRE_TIERS
+        ),
+      },
+      {
+        type: "PLAN_COMPTES" as FileType,
+        score: matchesType("PLAN_COMPTES" as FileType, keywords.PLAN_COMPTES),
+      },
+      {
+        type: "PLAN_TIERS" as FileType,
+        score: matchesType("PLAN_TIERS" as FileType, keywords.PLAN_TIERS),
+      },
+      {
+        type: "CODE_JOURNAL" as FileType,
+        score: matchesType("CODE_JOURNAL" as FileType, keywords.CODE_JOURNAL),
+      },
+    ];
+
+    // Trouver le type avec le meilleur score
+    const bestMatch = scores.reduce((prev, current) =>
+      current.score > prev.score ? current : prev
+    );
+
+    // Retourner le type seulement si le score est supérieur à 0
+    return bestMatch.score > 0 ? bestMatch.type : undefined;
+  };
+
   const handleFiles = (newFiles: FileList | null) => {
     if (!newFiles) return;
 
@@ -90,9 +209,13 @@ export default function UploadFilesDialog({
         return;
       }
 
+      // Détecter automatiquement le type de fichier
+      const detectedType = detectFileType(file.name);
+
       validFiles.push({
         file,
         id: Math.random().toString(36),
+        fileType: detectedType, // Assigner automatiquement le type détecté
       });
     });
 
