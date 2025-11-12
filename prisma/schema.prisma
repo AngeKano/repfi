@@ -74,6 +74,7 @@ model Client {
   modifiedBy     User?              @relation("ClientModifier", fields: [modifiedById], references: [id])
   files          File[]
   socialNetworks SocialNetwork[]
+  comptablePeriods ComptablePeriod[] // Added to provide the opposite relation for ComptablePeriod.client
 
   @@index([companyId])
   @@index([isSelfEntity])
@@ -112,6 +113,8 @@ model SocialNetwork {
   @@map("social_networks")
 }
 
+// Ajout dans schema.prisma
+
 model File {
   id           String     @id @default(cuid())
   fileName     String
@@ -133,12 +136,28 @@ model File {
   client       Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
   uploadedBy   User       @relation(fields: [uploadedById], references: [id])
 
+  // NOUVEAU : Catégorisation des fichiers
+  category      FileCategory  @default(NORMAL)
+
+  // Pour fichiers comptables uniquement
+  periodStart   DateTime?
+  periodEnd     DateTime?
+  processingStatus ProcessingStatus @default(PENDING)
+  batchId       String?       // Pour regrouper les 5 fichiers d'une période
+
+  // Lien vers une période comptable (relation 0/1-n)
+  comptablePeriodId String?
+  comptablePeriod   ComptablePeriod? @relation(fields: [comptablePeriodId], references: [id], onDelete: SetNull, name: "PeriodFiles")
+
   @@index([clientId])
   @@index([uploadedById])
   @@index([fileType])
   @@index([fileYear])
   @@index([status])
   @@index([deletedAt])
+  @@index([category])
+  @@index([batchId])
+  @@index([processingStatus])
   @@map("files")
 }
 
@@ -169,6 +188,30 @@ model FileTypePattern {
   @@index([fileType])
   @@index([priority])
   @@map("file_type_patterns")
+}
+
+// Nouvelle table pour gérer les périodes comptables
+model ComptablePeriod {
+  id            String        @id @default(cuid())
+  clientId      String
+  periodStart   DateTime
+  periodEnd     DateTime
+  year          Int
+  batchId       String        @unique
+  status        ProcessingStatus @default(PENDING)
+
+  // Tracking
+  createdAt     DateTime      @default(now())
+  processedAt   DateTime?
+
+  // Relations
+  client        Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  files         File[]        @relation("PeriodFiles")
+
+  @@unique([clientId, periodStart, periodEnd])
+  @@index([clientId])
+  @@index([status])
+  @@map("comptable_periods")
 }
 
 enum PackType {
@@ -203,6 +246,21 @@ enum FileType {
   PLAN_COMPTES
   PLAN_TIERS
   CODE_JOURNAL
+}
+
+// NOUVEAU ENUM : Catégorisation des fichiers
+enum FileCategory {
+  NORMAL      // Fichiers vrac (PDF, images, etc.)
+  COMPTABLE   // Fichiers pour ETL
+}
+
+// NOUVEAU ENUM : Etats de traitement des fichiers comptables et batchs
+enum ProcessingStatus {
+  PENDING     // En attente de traitement
+  VALIDATING  // Validation en cours
+  PROCESSING  // ETL en cours
+  COMPLETED   // Traité avec succès
+  FAILED      // Échec de traitement
 }
 
 enum FileStatus {
