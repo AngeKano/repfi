@@ -11,23 +11,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload, X, FileSpreadsheet, AlertCircle } from "lucide-react";
 import { FileType } from "@prisma/client";
+import { isValidFile } from "@/utils/validate-files";
 
 interface UploadFile {
   file: File;
   id: string;
-  fileType?: FileType;
   error?: string;
 }
 
@@ -46,144 +39,13 @@ export default function UploadFilesDialog({
 }: UploadFilesDialogProps) {
   const router = useRouter();
   const [files, setFiles] = useState<UploadFile[]>([]);
-  const [selectedDate, setSelectedDate] = useState("");
+  const today = new Date().toISOString().split("T")[0];
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [dragActive, setDragActive] = useState(false);
 
   const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
   const MAX_FILES = 10;
-
-  const isValidExcel = (file: File) => {
-    const validTypes = [
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      ".xlsx",
-      ".xls",
-    ];
-    return validTypes.some(
-      (type) => file.type === type || file.name.endsWith(type)
-    );
-  };
-
-  const detectFileType = (fileName: string): FileType | undefined => {
-    // Normaliser le nom du fichier (minuscules, retirer les chiffres et caractères spéciaux)
-    const normalizedName = fileName
-      .toLowerCase()
-      .replace(/[0-9_\-\.]/g, " ")
-      .trim();
-
-    // Définir les mots-clés pour chaque type de fichier
-    const keywords = {
-      GRAND_LIVRE_COMPTES: [
-        "grand",
-        "livre",
-        "livres",
-        "compte",
-        "comptes",
-        "gl",
-        "glcompte",
-        "glcomptes",
-        "grandlivre",
-        "grandlivrecompte",
-        "grandlivrecomptes",
-      ],
-      GRAND_LIVRE_TIERS: [
-        "grand",
-        "livre",
-        "livres",
-        "tiers",
-        "tier",
-        "gl",
-        "gltiers",
-        "gltier",
-        "grandlivretiers",
-        "grandlivretier",
-      ],
-      PLAN_COMPTES: [
-        "plan",
-        "compte",
-        "comptes",
-        "cmpt",
-        "pl",
-        "plcompte",
-        "plcomptes",
-        "plancompte",
-        "plancomptes",
-      ],
-      PLAN_TIERS: [
-        "plan",
-        "tiers",
-        "tier",
-        "trs",
-        "pl",
-        "pltiers",
-        "pltier",
-        "plantiers",
-        "plantier",
-      ],
-      CODE_JOURNAL: [
-        "code",
-        "journal",
-        "journaux",
-        "journeau",
-        "cd",
-        "cj",
-        "codejournal",
-        "codejournaux",
-        "cdjournal",
-      ],
-    };
-
-    // Fonction pour vérifier si le nom contient les mots-clés d'un type
-    const matchesType = (type: FileType, words: string[]): number => {
-      let score = 0;
-      words.forEach((word) => {
-        if (normalizedName.includes(word)) {
-          score += word.length; // Score basé sur la longueur du mot pour privilégier les matches plus spécifiques
-        }
-      });
-      return score;
-    };
-
-    // Calculer le score pour chaque type
-    const scores: { type: FileType; score: number }[] = [
-      {
-        type: "GRAND_LIVRE_COMPTES" as FileType,
-        score: matchesType(
-          "GRAND_LIVRE_COMPTES" as FileType,
-          keywords.GRAND_LIVRE_COMPTES
-        ),
-      },
-      {
-        type: "GRAND_LIVRE_TIERS" as FileType,
-        score: matchesType(
-          "GRAND_LIVRE_TIERS" as FileType,
-          keywords.GRAND_LIVRE_TIERS
-        ),
-      },
-      {
-        type: "PLAN_COMPTES" as FileType,
-        score: matchesType("PLAN_COMPTES" as FileType, keywords.PLAN_COMPTES),
-      },
-      {
-        type: "PLAN_TIERS" as FileType,
-        score: matchesType("PLAN_TIERS" as FileType, keywords.PLAN_TIERS),
-      },
-      {
-        type: "CODE_JOURNAL" as FileType,
-        score: matchesType("CODE_JOURNAL" as FileType, keywords.CODE_JOURNAL),
-      },
-    ];
-
-    // Trouver le type avec le meilleur score
-    const bestMatch = scores.reduce((prev, current) =>
-      current.score > prev.score ? current : prev
-    );
-
-    // Retourner le type seulement si le score est supérieur à 0
-    return bestMatch.score > 0 ? bestMatch.type : undefined;
-  };
 
   const handleFiles = (newFiles: FileList | null) => {
     if (!newFiles) return;
@@ -196,7 +58,7 @@ export default function UploadFilesDialog({
         return;
       }
 
-      if (!isValidExcel(file)) {
+      if (!isValidFile(file)) {
         return;
       }
 
@@ -209,13 +71,9 @@ export default function UploadFilesDialog({
         return;
       }
 
-      // Détecter automatiquement le type de fichier
-      const detectedType = detectFileType(file.name);
-
       validFiles.push({
         file,
         id: Math.random().toString(36),
-        fileType: detectedType, // Assigner automatiquement le type détecté
       });
     });
 
@@ -250,12 +108,7 @@ export default function UploadFilesDialog({
   const handleSubmit = async () => {
     setError("");
 
-    if (!selectedDate) {
-      setError("Veuillez sélectionner une date");
-      return;
-    }
-
-    const invalidFiles = files.filter((f) => !f.fileType || f.error);
+    const invalidFiles = files.filter((f) => f.error);
     if (invalidFiles.length > 0) {
       setError("Tous les fichiers doivent avoir un type valide");
       return;
@@ -263,7 +116,7 @@ export default function UploadFilesDialog({
 
     setLoading(true);
 
-    const date = new Date(selectedDate);
+    const date = new Date(today);
     const fileYear = date.getFullYear();
     const fileMonth = date.getMonth() + 1;
     const fileDay = date.getDate();
@@ -273,12 +126,11 @@ export default function UploadFilesDialog({
         const formData = new FormData();
         formData.append("file", uploadFile.file);
         formData.append("clientId", clientId);
-        formData.append("fileType", uploadFile.fileType!);
         formData.append("fileYear", fileYear.toString());
         formData.append("fileMonth", fileMonth.toString());
         formData.append("fileDay", fileDay.toString());
 
-        const response = await fetch("/api/files", {
+        const response = await fetch("/api/files/normal/upload", {
           method: "POST",
           body: formData,
         });
@@ -290,7 +142,6 @@ export default function UploadFilesDialog({
 
       onOpenChange(false);
       setFiles([]);
-      setSelectedDate("");
       router.refresh();
       onSuccess?.();
     } catch (err) {
@@ -315,18 +166,6 @@ export default function UploadFilesDialog({
             </Alert>
           )}
 
-          {/* Date Selection */}
-          <div>
-            <Label htmlFor="date">Date des fichiers *</Label>
-            <Input
-              id="date"
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="mt-2"
-            />
-          </div>
-
           {/* Drag & Drop Zone */}
           <div
             className={`border-2 border-dashed flex-col justify-center items-center rounded-lg p-8 text-center transition-colors ${
@@ -349,7 +188,7 @@ export default function UploadFilesDialog({
             <Input
               type="file"
               multiple
-              accept=".xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              accept=".png,.jpeg,.jpg,.webp,.pdf,.doc,.docx,.xls,.xlsx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf,image/png,image/jpeg,image/jpg,image/webp"
               onChange={(e) => handleFiles(e.target.files)}
               className="hidden"
               id="file-input"
@@ -384,34 +223,6 @@ export default function UploadFilesDialog({
                       <p className="text-sm text-red-500">{uploadFile.error}</p>
                     )}
                   </div>
-                  <div className="flex-shrink-0 w-48">
-                    <Select
-                      disabled={!!uploadFile.error}
-                      value={uploadFile.fileType}
-                      onValueChange={(value) =>
-                        updateFileType(uploadFile.id, value as FileType)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Type de fichier" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="GRAND_LIVRE_COMPTES">
-                          Grand Livre Comptes
-                        </SelectItem>
-                        <SelectItem value="GRAND_LIVRE_TIERS">
-                          Grand Livre Tiers
-                        </SelectItem>
-                        <SelectItem value="PLAN_COMPTES">
-                          Plan Comptes
-                        </SelectItem>
-                        <SelectItem value="PLAN_TIERS">Plan Tiers</SelectItem>
-                        <SelectItem value="CODE_JOURNAL">
-                          Code Journal
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -442,8 +253,7 @@ export default function UploadFilesDialog({
             disabled={
               loading ||
               files.length === 0 ||
-              !selectedDate ||
-              files.filter((f) => !f.fileType || f.error).length > 0
+              files.filter((f) => f.error).length > 0
             }
           >
             {loading

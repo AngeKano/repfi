@@ -238,8 +238,8 @@ export default function ClientsListClient({
                           <div className="flex items-center gap-1">
                             <FileText className="w-4 h-4" />
                             <span>
-                              {client._count.files} fichier
-                              {client._count.files > 1 ? "s" : ""}
+                              {client._count.normalFiles} fichier
+                              {client._count.normalFiles > 1 ? "s" : ""}
                             </span>
                           </div>
 

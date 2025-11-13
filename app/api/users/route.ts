@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
         _count: {
           select: {
             clientAssignments: true,
-            uploadedFiles: true,
+            normalFiles: true,
           },
         },
       },

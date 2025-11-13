@@ -41,7 +41,7 @@ async function checkUserAccess(userId: string, sessionUserId: string, role: stri
       _count: {
         select: {
           clientAssignments: true,
-          uploadedFiles: true,
+          normalFiles: true,
         },
       },
     },

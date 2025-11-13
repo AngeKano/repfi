@@ -47,26 +47,27 @@ export async function POST(request: Request) {
       data: {
         email,
         password: hashedPassword,
-        name,
+        firstName: name, // Enregistre le prénom dans "firstName"
         companyId,
         role,
       },
       select: {
         id: true,
         email: true,
-        name: true,
+        firstName: true,
+        lastName: true,
         role: true,
         companyId: true,
         createdAt: true,
         company: {
           select: {
             id: true,
-            nom: true,
-            denomination: true,
+            name: true,
           },
         },
       },
     });
+
 
     return NextResponse.json(
       {

@@ -148,7 +148,7 @@ export async function GET(req: NextRequest) {
         updatedAt: true,
         _count: {
           select: {
-            files: true,
+            normalFiles: true,
             assignments: true,
           },
         },

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
@@ -16,7 +15,14 @@ export async function POST(request: Request) {
     } = body;
 
     // Validation des champs obligatoires
-    if (!email || !password || !nom || !denomination || !dateFondation || !typeEntreprise) {
+    if (
+      !email ||
+      !password ||
+      !nom ||
+      !denomination ||
+      !dateFondation ||
+      !typeEntreprise
+    ) {
       return NextResponse.json(
         { error: "Tous les champs obligatoires doivent être remplis" },
         { status: 400 }
@@ -49,7 +55,7 @@ export async function POST(request: Request) {
       }
 
       // Vérifier que l'entreprise parente n'est pas elle-même une filiale
-      if (parentCompany.parentCompanyId) {
+      if (parentCompany.id) {
         return NextResponse.json(
           { error: "Une filiale ne peut pas créer d'autres filiales" },
           { status: 403 }
@@ -57,28 +63,20 @@ export async function POST(request: Request) {
       }
     }
 
-    // Hasher le mot de passe
-    const hashedPassword = await bcrypt.hash(password, 12);
-
     // Créer l'entreprise
     const company = await prisma.company.create({
       data: {
-        email,
-        password: hashedPassword,
-        nom,
+        name: nom,
         denomination,
-        dateFondation: new Date(dateFondation),
-        typeEntreprise,
-        parentCompanyId: parentCompanyId || null,
+        companyType: typeEntreprise,
+        email,
       },
       select: {
         id: true,
         email: true,
-        nom: true,
+        name: true,
         denomination: true,
-        typeEntreprise: true,
-        dateFondation: true,
-        parentCompanyId: true,
+        companyType: true,
         createdAt: true,
       },
     });
