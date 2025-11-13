@@ -45,7 +45,7 @@ export default async function UserDetailsPage({
       _count: {
         select: {
           clientAssignments: true,
-          uploadedFiles: true,
+          normalFiles: true,
         },
       },
     },

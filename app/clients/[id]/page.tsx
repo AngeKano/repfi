@@ -50,7 +50,7 @@ export default async function ClientDetailsPage({
           },
         },
       },
-      files: {
+      normalFiles: {
         where: { deletedAt: null },
         orderBy: { uploadedAt: "desc" },
         take: 10,
@@ -59,7 +59,6 @@ export default async function ClientDetailsPage({
           fileName: true,
           fileSize: true,
           mimeType: true,
-          status: true,
           uploadedAt: true,
           uploadedBy: {
             select: {
@@ -71,11 +70,35 @@ export default async function ClientDetailsPage({
           },
         },
       },
+      comptablePeriods: {
+        orderBy: { periodStart: "desc" },
+        take: 5,
+        include: {
+          files: {
+            select: {
+              id: true,
+              fileName: true,
+              fileSize: true,
+              mimeType: true,
+              uploadedAt: true,
+              uploadedBy: {
+                select: {
+                  id: true,
+                  email: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+          },
+        },
+      },
       _count: {
         select: {
-          files: {
+          normalFiles: {
             where: { deletedAt: null },
           },
+          comptablePeriods: true,
           assignments: true,
         },
       },
@@ -105,10 +128,11 @@ export default async function ClientDetailsPage({
   const clientData = {
     ...client,
     assignedMembers: client.assignments.map((a) => a.user),
-    recentFiles: client.files,
+    recentFiles: client.normalFiles,
     stats: {
-      totalFiles: client._count.files || 0,
+      totalFiles: client._count.normalFiles || 0,
       totalMembers: client._count.assignments || 0,
+      totalComptablePeriods: client._count.comptablePeriods || 0,
     },
   };
 

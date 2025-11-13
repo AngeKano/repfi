@@ -1,11 +1,16 @@
 // app/api/files/comptable/upload/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { PrismaClient, FileType, FileCategory, ProcessingStatus } from "@prisma/client";
-import { S3Client, PutObjectCommand, ListObjectsV2Command, CopyObjectCommand } from "@aws-sdk/client-s3";
+import { PrismaClient, FileType, ProcessingStatus } from "@prisma/client";
+import {
+  S3Client,
+  PutObjectCommand,
+  ListObjectsV2Command,
+  CopyObjectCommand,
+} from "@aws-sdk/client-s3";
 import { z } from "zod";
-import { authOptions } from "../../auth/[...nextauth]/route";
 import { randomUUID } from "crypto";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 const prisma = new PrismaClient();
 
@@ -19,6 +24,8 @@ const s3Client = new S3Client({
 
 const uploadComptableSchema = z.object({
   clientId: z.string(),
+  periodStart: z.string(),
+  periodEnd: z.string(),
 });
 
 const REQUIRED_FILE_TYPES = [
@@ -29,109 +36,20 @@ const REQUIRED_FILE_TYPES = [
   FileType.CODE_JOURNAL,
 ];
 
-interface PeriodExtraction {
-  start: Date;
-  end: Date;
-}
-
-/**
- * Extrait la période depuis un fichier Excel Grand Livre
- * Recherche "Période du" et "au" pour extraire les dates
- */
-async function extractPeriodFromExcel(buffer: Buffer): Promise<PeriodExtraction> {
-  const XLSX = require('xlsx');
-  
-  const workbook = XLSX.read(buffer, { type: 'buffer' });
-  const sheetName = workbook.SheetNames[0];
-  const sheet = workbook.Sheets[sheetName];
-  
-  // Convertir en JSON pour parcourir les lignes
-  const data: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-  
-  let periodStart: Date | null = null;
-  let periodEnd: Date | null = null;
-  
-  for (let i = 0; i < data.length; i++) {
-    const row = data[i];
-    const rowStr = row.join(' ').toLowerCase();
-    
-    // Chercher "Période du" ou "Periode du"
-    if (rowStr.includes('période du') || rowStr.includes('periode du')) {
-      const dateMatch = rowStr.match(/(\d{2}\/\d{2}\/\d{2,4})/);
-      if (dateMatch) {
-        periodStart = parseFrenchDate(dateMatch[1]);
-      }
-    }
-    
-    // Chercher "au" isolé
-    if (periodStart && rowStr.trim() === 'au' && i + 1 < data.length) {
-      const nextRow = data[i + 1];
-      const nextRowStr = nextRow.join(' ');
-      const dateMatch = nextRowStr.match(/(\d{2}\/\d{2}\/\d{2,4})/);
-      if (dateMatch) {
-        periodEnd = parseFrenchDate(dateMatch[1]);
-        break;
-      }
-    }
-  }
-  
-  if (!periodStart || !periodEnd) {
-    throw new Error("Impossible d'extraire la période du fichier");
-  }
-  
-  return { start: periodStart, end: periodEnd };
-}
-
-/**
- * Parse une date française DD/MM/YYYY ou DD/MM/YY
- */
-function parseFrenchDate(dateStr: string): Date {
-  const parts = dateStr.split('/');
-  const day = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10) - 1; // Les mois commencent à 0
-  let year = parseInt(parts[2], 10);
-  
-  // Si année sur 2 chiffres, ajouter 2000
-  if (year < 100) {
-    year += 2000;
-  }
-  
-  return new Date(year, month, day);
-}
-
-/**
- * Vérifie que deux périodes sont identiques
- */
-function periodsMatch(period1: PeriodExtraction, period2: PeriodExtraction): boolean {
-  return (
-    period1.start.getTime() === period2.start.getTime() &&
-    period1.end.getTime() === period2.end.getTime()
-  );
-}
-
-/**
- * Formate une date en YYYYMMDD
- */
 function formatDateYYYYMMDD(date: Date): string {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}${month}${day}`;
 }
 
-/**
- * Formate une période pour le nom de répertoire
- */
 function formatPeriodFolder(start: Date, end: Date): string {
   return `periode-${formatDateYYYYMMDD(start)}-${formatDateYYYYMMDD(end)}`;
 }
 
-/**
- * Crée un backup des fichiers existants si nécessaire
- */
 async function createBackupIfNeeded(s3Prefix: string): Promise<void> {
   const bucket = process.env.AWS_S3_BUCKET_NAME!;
-  
+
   try {
     const listResponse = await s3Client.send(
       new ListObjectsV2Command({
@@ -140,17 +58,23 @@ async function createBackupIfNeeded(s3Prefix: string): Promise<void> {
         MaxKeys: 10,
       })
     );
-    
-    // Si des fichiers existent, créer un backup
+
     if (listResponse.Contents && listResponse.Contents.length > 0) {
       const now = new Date();
-      const timestamp = `${formatDateYYYYMMDD(now)}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+      const timestamp = `${formatDateYYYYMMDD(now)}_${String(
+        now.getHours()
+      ).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(
+        now.getSeconds()
+      ).padStart(2, "0")}`;
       const backupPrefix = `${s3Prefix}backup/${timestamp}/`;
-      
-      // Copier chaque fichier vers le backup
+
       for (const obj of listResponse.Contents) {
-        if (!obj.Key?.includes('backup/') && !obj.Key?.includes('success/')) {
-          const fileName = obj.Key.split('/').pop();
+        if (
+          obj.Key &&
+          !obj.Key.includes("backup/") &&
+          !obj.Key.includes("success/")
+        ) {
+          const fileName = obj.Key.split("/").pop();
           await s3Client.send(
             new CopyObjectCommand({
               Bucket: bucket,
@@ -162,8 +86,7 @@ async function createBackupIfNeeded(s3Prefix: string): Promise<void> {
       }
     }
   } catch (error) {
-    console.error('Erreur lors de la création du backup:', error);
-    // Ne pas bloquer si le backup échoue
+    console.error("Erreur lors de la création du backup:", error);
   }
 }
 
@@ -176,7 +99,9 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData();
     const clientId = formData.get("clientId") as string;
-    
+    const periodStartStr = formData.get("periodStart") as string;
+    const periodEndStr = formData.get("periodEnd") as string;
+
     // Récupérer les 5 fichiers
     const files: { file: File; fileType: FileType }[] = [];
     for (const fileType of REQUIRED_FILE_TYPES) {
@@ -191,7 +116,26 @@ export async function POST(req: NextRequest) {
     }
 
     // Validation du schéma
-    const data = uploadComptableSchema.parse({ clientId });
+    const data = uploadComptableSchema.parse({
+      clientId,
+      periodStart: periodStartStr,
+      periodEnd: periodEndStr,
+    });
+
+    // Convertir les dates
+    const periodStart = new Date(data.periodStart);
+    const periodEnd = new Date(data.periodEnd);
+
+    if (isNaN(periodStart.getTime()) || isNaN(periodEnd.getTime())) {
+      return NextResponse.json({ error: "Dates invalides" }, { status: 400 });
+    }
+
+    if (periodStart >= periodEnd) {
+      return NextResponse.json(
+        { error: "La date de début doit être antérieure à la date de fin" },
+        { status: 400 }
+      );
+    }
 
     // Vérifier que le client existe
     const client = await prisma.client.findFirst({
@@ -225,7 +169,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Vérifier qu'il n'y a pas de doublons de type
-    const fileTypes = files.map(f => f.fileType);
+    const fileTypes = files.map((f) => f.fileType);
     const uniqueTypes = new Set(fileTypes);
     if (uniqueTypes.size !== fileTypes.length) {
       return NextResponse.json(
@@ -234,48 +178,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Extraire les périodes des deux Grand Livres
-    const grandLivreComptesFile = files.find(f => f.fileType === FileType.GRAND_LIVRE_COMPTES)!;
-    const grandLivreTiersFile = files.find(f => f.fileType === FileType.GRAND_LIVRE_TIERS)!;
-
-    const bufferComptes = Buffer.from(await grandLivreComptesFile.file.arrayBuffer());
-    const bufferTiers = Buffer.from(await grandLivreTiersFile.file.arrayBuffer());
-
-    let periodComptes: PeriodExtraction;
-    let periodTiers: PeriodExtraction;
-
-    try {
-      periodComptes = await extractPeriodFromExcel(bufferComptes);
-      periodTiers = await extractPeriodFromExcel(bufferTiers);
-    } catch (error: any) {
-      return NextResponse.json(
-        { error: `Erreur d'extraction de période: ${error.message}` },
-        { status: 400 }
-      );
-    }
-
-    // Vérifier que les périodes correspondent
-    if (!periodsMatch(periodComptes, periodTiers)) {
-      return NextResponse.json(
-        {
-          error: "Les périodes des deux Grand Livres ne correspondent pas",
-          details: {
-            grandLivreComptes: {
-              start: periodComptes.start.toISOString(),
-              end: periodComptes.end.toISOString(),
-            },
-            grandLivreTiers: {
-              start: periodTiers.start.toISOString(),
-              end: periodTiers.end.toISOString(),
-            },
-          },
-        },
-        { status: 400 }
-      );
-    }
-
-    const period = periodComptes;
-    const year = period.start.getFullYear();
+    const year = periodStart.getFullYear();
 
     // Vérifier qu'il n'y a pas de chevauchement avec des périodes existantes
     const overlappingPeriod = await prisma.comptablePeriod.findFirst({
@@ -285,8 +188,8 @@ export async function POST(req: NextRequest) {
         OR: [
           {
             AND: [
-              { periodStart: { lte: period.end } },
-              { periodEnd: { gte: period.start } },
+              { periodStart: { lte: periodEnd } },
+              { periodEnd: { gte: periodStart } },
             ],
           },
         ],
@@ -310,7 +213,7 @@ export async function POST(req: NextRequest) {
     const batchId = randomUUID();
 
     // Définir le préfixe S3
-    const periodFolder = formatPeriodFolder(period.start, period.end);
+    const periodFolder = formatPeriodFolder(periodStart, periodEnd);
     const s3Prefix = `${data.clientId}/declaration/${year}/${periodFolder}/`;
 
     // Créer un backup si des fichiers existent déjà
@@ -319,12 +222,24 @@ export async function POST(req: NextRequest) {
     // Uploader les fichiers sur S3
     const uploadedFiles: any[] = [];
 
+    // Créer l'enregistrement de la période
+    const comptablePeriod = await prisma.comptablePeriod.create({
+      data: {
+        clientId: data.clientId,
+        periodStart: periodStart,
+        periodEnd: periodEnd,
+        year,
+        batchId,
+        status: ProcessingStatus.PENDING,
+      },
+    });
+
     for (const { file, fileType } of files) {
       const fileBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(fileBuffer);
 
       // Générer le nom de fichier: YYYYMMDD_TYPE_ClientName.xlsx
-      const dateStr = formatDateYYYYMMDD(period.end);
+      const dateStr = formatDateYYYYMMDD(periodEnd);
       const ext = file.name.split(".").pop();
       const fileName = `${dateStr}_${fileType}_${client.name}.${ext}`;
 
@@ -342,21 +257,20 @@ export async function POST(req: NextRequest) {
       );
 
       // Créer l'enregistrement dans la base
-      const fileRecord = await prisma.file.create({
+      const fileRecord = await prisma.comptableFile.create({
         data: {
           fileName: fileName,
           fileType: fileType,
           fileYear: year,
-          category: FileCategory.COMPTABLE,
           s3Key,
           s3Url,
           fileSize: file.size,
           mimeType: file.type,
-          status: FileStatus.SUCCES,
+          status: "SUCCES",
           processingStatus: ProcessingStatus.PENDING,
           batchId,
-          periodStart: period.start,
-          periodEnd: period.end,
+          periodStart: periodStart,
+          periodEnd: periodEnd,
           clientId: data.clientId,
           uploadedById: session.user.id,
           processedAt: new Date(),
@@ -366,37 +280,27 @@ export async function POST(req: NextRequest) {
       uploadedFiles.push(fileRecord);
 
       // Créer l'historique
-      await prisma.fileHistory.create({
+      await prisma.comptableFileHistory.create({
         data: {
           fileId: fileRecord.id,
           fileName: fileName,
           action: "UPLOAD_COMPTABLE",
-          details: `Fichier comptable uploadé - Période: ${formatDateYYYYMMDD(period.start)} au ${formatDateYYYYMMDD(period.end)}`,
+          details: `Fichier comptable uploadé - Période: ${formatDateYYYYMMDD(
+            periodStart
+          )} au ${formatDateYYYYMMDD(periodEnd)}`,
           userId: session.user.id,
           userEmail: session.user.email ?? "",
         },
       });
     }
 
-    // Créer l'enregistrement de la période
-    const comptablePeriod = await prisma.comptablePeriod.create({
-      data: {
-        clientId: data.clientId,
-        periodStart: period.start,
-        periodEnd: period.end,
-        year,
-        batchId,
-        status: ProcessingStatus.PENDING,
-      },
-    });
-
     return NextResponse.json(
       {
         message: "Fichiers comptables uploadés avec succès",
         batchId,
         period: {
-          start: period.start.toISOString(),
-          end: period.end.toISOString(),
+          start: periodStart.toISOString(),
+          end: periodEnd.toISOString(),
           year,
         },
         s3Prefix,
@@ -414,7 +318,10 @@ export async function POST(req: NextRequest) {
       );
     }
     return NextResponse.json(
-      { error: "Erreur lors de l'upload des fichiers comptables", details: error.message },
+      {
+        error: "Erreur lors de l'upload des fichiers comptables",
+        details: error.message,
+      },
       { status: 500 }
     );
   }

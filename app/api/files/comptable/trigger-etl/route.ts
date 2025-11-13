@@ -3,8 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { PrismaClient, ProcessingStatus } from "@prisma/client";
 import { z } from "zod";
-import { authOptions } from "../../auth/[...nextauth]/route";
-import axios from "axios";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 const prisma = new PrismaClient();
 
@@ -12,53 +11,72 @@ const triggerETLSchema = z.object({
   batchId: z.string().uuid(),
 });
 
-/**
- * Déclenche le DAG Airflow pour traiter les fichiers comptables
- */
 async function triggerAirflowDAG(
   batchId: string,
   clientId: string,
   clientName: string,
   s3Prefix: string
 ): Promise<string> {
-  const airflowUrl = process.env.AIRFLOW_API_URL; // http://localhost:8080/api/v1
+  // Déclenche le DAG Airflow pour traiter les fichiers commptables
+  const airflowUrl = process.env.AIRFLOW_API_URL;
   const airflowUsername = process.env.AIRFLOW_USERNAME;
   const airflowPassword = process.env.AIRFLOW_PASSWORD;
 
   if (!airflowUrl || !airflowUsername || !airflowPassword) {
-    throw new Error("Configuration Airflow manquante dans les variables d'environnement");
+    throw new Error(
+      "Configuration Airflow manquante dans les variables d'environnement"
+    );
   }
 
   try {
-    const response = await axios.post(
+    const basicAuth = Buffer.from(
+      `${airflowUsername}:${airflowPassword}`
+    ).toString("base64");
+    const airflowResponse = await fetch(
       `${airflowUrl}/dags/process_comptable_files/dagRuns`,
       {
-        conf: {
-          batch_id: batchId,
-          client_id: clientId,
-          client_name: clientName,
-          s3_prefix: s3Prefix,
-          s3_bucket: process.env.AWS_S3_BUCKET_NAME,
-        },
-      },
-      {
-        auth: {
-          username: airflowUsername,
-          password: airflowPassword,
-        },
+        method: "POST",
         headers: {
+          Authorization: `Basic ${basicAuth}`,
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          conf: {
+            batch_id: batchId,
+            client_id: clientId,
+            client_name: clientName,
+            s3_prefix: s3Prefix,
+            s3_bucket: process.env.AWS_S3_BUCKET_NAME,
+          },
+        }),
       }
     );
-
+    if (!airflowResponse.ok) {
+      let errMsg = "";
+      try {
+        errMsg =
+          (await airflowResponse.json()).detail || airflowResponse.statusText;
+      } catch (_) {
+        errMsg = airflowResponse.statusText;
+      }
+      throw new Error(`Échec du déclenchement Airflow: ${errMsg}`);
+    }
+    const response = await airflowResponse.json();
     return response.data.dag_run_id;
   } catch (error: any) {
-    console.error("Erreur lors du déclenchement Airflow:", error.response?.data || error.message);
-    throw new Error(`Échec du déclenchement Airflow: ${error.response?.data?.detail || error.message}`);
+    console.error(
+      "Erreur lors du déclenchement Airflow:",
+      error.response?.data || error.message
+    );
+    throw new Error(
+      `Échec du déclenchement Airflow: ${
+        error.response?.data?.detail || error.message
+      }`
+    );
   }
 }
 
+// Fichier commptable
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -69,8 +87,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { batchId } = triggerETLSchema.parse(body);
 
-    // Récupérer la période comptable
-    const comptablePeriod = await prisma.comptablePeriod.findUnique({
+    // Récupérer la période commptable
+    const commptablePeriod = await prisma.comptablePeriod.findUnique({
       where: {
         batchId,
       },
@@ -85,15 +103,15 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    if (!comptablePeriod) {
+    if (!commptablePeriod) {
       return NextResponse.json(
-        { error: "Période comptable non trouvée" },
+        { error: "Période commptable non trouvée" },
         { status: 404 }
       );
     }
 
     // Vérifier que l'utilisateur a accès à ce client
-    if (comptablePeriod.client.companyId !== session.user.companyId) {
+    if (commptablePeriod.client.companyId !== session.user.companyId) {
       return NextResponse.json(
         { error: "Accès non autorisé" },
         { status: 403 }
@@ -101,22 +119,22 @@ export async function POST(req: NextRequest) {
     }
 
     // Vérifier que la période n'est pas déjà en cours de traitement
-    if (comptablePeriod.status === ProcessingStatus.PROCESSING) {
+    if (commptablePeriod.status === ProcessingStatus.PROCESSING) {
       return NextResponse.json(
         {
           error: "Cette période est déjà en cours de traitement",
-          status: comptablePeriod.status,
+          status: commptablePeriod.status,
         },
         { status: 409 }
       );
     }
 
     // Vérifier que la période n'est pas déjà traitée
-    if (comptablePeriod.status === ProcessingStatus.COMPLETED) {
+    if (commptablePeriod.status === ProcessingStatus.COMPLETED) {
       return NextResponse.json(
         {
           error: "Cette période a déjà été traitée avec succès",
-          status: comptablePeriod.status,
+          status: commptablePeriod.status,
         },
         { status: 409 }
       );
@@ -125,14 +143,14 @@ export async function POST(req: NextRequest) {
     // Vérifier qu'il n'y a pas de chevauchement avec des périodes en cours
     const overlappingProcessing = await prisma.comptablePeriod.findFirst({
       where: {
-        clientId: comptablePeriod.clientId,
+        clientId: commptablePeriod.clientId,
         status: ProcessingStatus.PROCESSING,
-        id: { not: comptablePeriod.id },
+        id: { not: commptablePeriod.id },
         OR: [
           {
             AND: [
-              { periodStart: { lte: comptablePeriod.periodEnd } },
-              { periodEnd: { gte: comptablePeriod.periodStart } },
+              { periodStart: { lte: commptablePeriod.periodEnd } },
+              { periodEnd: { gte: commptablePeriod.periodStart } },
             ],
           },
         ],
@@ -153,8 +171,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Récupérer les fichiers associés
-    const files = await prisma.file.findMany({
+    // Récupérer les fichiers comptables associés à la période (table comptableFile)
+    const files = await prisma.comptableFile.findMany({
       where: {
         batchId,
       },
@@ -163,30 +181,32 @@ export async function POST(req: NextRequest) {
     if (files.length !== 5) {
       return NextResponse.json(
         {
-          error: `Nombre de fichiers invalide: ${files.length}/5`,
+          error: `Nombre de fichiers comptables invalide: ${files.length}/5`,
         },
         { status: 400 }
       );
     }
 
     // Construire le préfixe S3
-    const year = comptablePeriod.periodStart.getFullYear();
+    const year = commptablePeriod.periodStart.getFullYear();
     const formatDateYYYYMMDD = (date: Date): string => {
       const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
       return `${year}${month}${day}`;
     };
-    const periodFolder = `periode-${formatDateYYYYMMDD(comptablePeriod.periodStart)}-${formatDateYYYYMMDD(comptablePeriod.periodEnd)}`;
-    const s3Prefix = `${comptablePeriod.clientId}/declaration/${year}/${periodFolder}/`;
+    const periodFolder = `periode-${formatDateYYYYMMDD(
+      commptablePeriod.periodStart
+    )}-${formatDateYYYYMMDD(commptablePeriod.periodEnd)}`;
+    const s3Prefix = `${commptablePeriod.clientId}/declaration/${year}/${periodFolder}/`;
 
     // Déclencher le DAG Airflow
     let dagRunId: string;
     try {
       dagRunId = await triggerAirflowDAG(
         batchId,
-        comptablePeriod.client.id,
-        comptablePeriod.client.name,
+        commptablePeriod.client.id,
+        commptablePeriod.client.name,
         s3Prefix
       );
     } catch (error: any) {
@@ -202,15 +222,15 @@ export async function POST(req: NextRequest) {
     // Mettre à jour le statut de la période à PROCESSING
     await prisma.comptablePeriod.update({
       where: {
-        id: comptablePeriod.id,
+        id: commptablePeriod.id,
       },
       data: {
         status: ProcessingStatus.PROCESSING,
       },
     });
 
-    // Mettre à jour le statut des fichiers à PROCESSING
-    await prisma.file.updateMany({
+    // Mettre à jour le statut des fichiers comptables à PROCESSING
+    await prisma.comptableFile.updateMany({
       where: {
         batchId,
       },
@@ -219,9 +239,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Créer un historique pour chaque fichier
+    // Créer un historique pour chaque fichier comptable
     for (const file of files) {
-      await prisma.fileHistory.create({
+      await prisma.comptableFileHistory.create({
         data: {
           fileId: file.id,
           fileName: file.fileName,
@@ -240,8 +260,8 @@ export async function POST(req: NextRequest) {
         dagRunId,
         status: ProcessingStatus.PROCESSING,
         period: {
-          start: comptablePeriod.periodStart.toISOString(),
-          end: comptablePeriod.periodEnd.toISOString(),
+          start: commptablePeriod.periodStart.toISOString(),
+          end: commptablePeriod.periodEnd.toISOString(),
         },
         s3Prefix,
       },
@@ -283,7 +303,11 @@ export async function GET(req: NextRequest) {
         },
         ...(clientId && { clientId }),
         status: {
-          in: [ProcessingStatus.PENDING, ProcessingStatus.PROCESSING, ProcessingStatus.VALIDATING],
+          in: [
+            ProcessingStatus.PENDING,
+            ProcessingStatus.PROCESSING,
+            ProcessingStatus.VALIDATING,
+          ],
         },
       },
       include: {
