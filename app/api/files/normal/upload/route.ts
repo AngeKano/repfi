@@ -72,9 +72,29 @@ export async function POST(req: NextRequest) {
     const fileBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(fileBuffer);
 
+    // Version corrigée pour inclure company.name dans le préfixe S3 si besoin
+    // Assume we have `client` fetched above, so client.name is available
+    const clientName = client.name.replace(/\s+/g, "_").replace(/[^\w\-]/g, "");
+    //
+
+    // On récupère la company liée au client (déjà vérifié plus haut que client est valide)
+    const company = await prisma.company.findUnique({
+      where: { id: client.companyId },
+      select: { name: true, id: true },
+    });
+    if (!company) {
+      return NextResponse.json(
+        { error: "Entreprise non trouvée" },
+        { status: 404 }
+      );
+    }
+    const companyName = company.name
+      .replace(/\s+/g, "_")
+      .replace(/[^\w\-]/g, "");
+
     const s3Key = folderId
-      ? `${data.clientId}/folder/${folderId}/${file.name}`
-      : `${data.clientId}/folder/${file.name}`;
+      ? `${companyName}_${company.id}/${clientName}_${client.id}/folder/${folderId}/${file.name}`
+      : `${companyName}_${company.id}/${clientName}_${client.id}/folder/${file.name}`;
 
     const s3Url = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
 
