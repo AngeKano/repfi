@@ -43,10 +43,10 @@ model User {
   clientAssignments ClientAssignment[]
   createdClients    Client[]           @relation("ClientCreator")
   modifiedClients   Client[]           @relation("ClientModifier")
+  comptableFiles    ComptableFile[]    @relation("ComptableFileUploader")
+  folders           Folder[]           @relation("FolderCreator")
+  normalFiles       NormalFile[]       @relation("NormalFileUploader")
   company           Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  folders           Folder[]         @relation("FolderCreator")
-  normalFiles       NormalFile[]     @relation("NormalFileUploader")
-  comptableFiles    ComptableFile[]  @relation("ComptableFileUploader")
 
   @@index([email])
   @@index([companyId])
@@ -74,11 +74,12 @@ model Client {
   company          Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   createdBy        User               @relation("ClientCreator", fields: [createdById], references: [id])
   modifiedBy       User?              @relation("ClientModifier", fields: [modifiedById], references: [id])
+  comptableFiles   ComptableFile[]
+  comptablePeriods ComptablePeriod[]
+  folders          Folder[]
+  normalFiles      NormalFile[]
   socialNetworks   SocialNetwork[]
-  comptablePeriods ComptablePeriod[] // Added to provide the opposite relation for ComptablePeriod.client
-  folders           Folder[]
-  normalFiles       NormalFile[]
-  comptableFiles    ComptableFile[]
+
   @@index([companyId])
   @@index([isSelfEntity])
   @@index([createdById])
@@ -101,7 +102,6 @@ model ClientAssignment {
   @@map("client_assignments")
 }
 
-
 model Folder {
   id          String       @id @default(cuid())
   name        String
@@ -110,13 +110,12 @@ model Folder {
   createdById String
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
-  
   client      Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
   createdBy   User         @relation("FolderCreator", fields: [createdById], references: [id])
   parent      Folder?      @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children    Folder[]     @relation("FolderHierarchy")
   files       NormalFile[]
-  
+
   @@index([clientId])
   @@index([parentId])
   @@map("folders")
@@ -137,9 +136,6 @@ model SocialNetwork {
   @@map("social_networks")
 }
 
-
-
-// Fichiers NORMAUX (Google Drive style)
 model NormalFile {
   id           String    @id @default(cuid())
   fileName     String
@@ -152,11 +148,10 @@ model NormalFile {
   uploadedById String
   uploadedAt   DateTime  @default(now())
   deletedAt    DateTime?
-  
   client       Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  folder       Folder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  folder       Folder?   @relation(fields: [folderId], references: [id])
   uploadedBy   User      @relation("NormalFileUploader", fields: [uploadedById], references: [id])
-  
+
   @@index([clientId])
   @@index([folderId])
   @@index([uploadedById])
@@ -164,32 +159,30 @@ model NormalFile {
   @@map("normal_files")
 }
 
-// Fichiers COMPTABLES (pour ETL)
 model ComptableFile {
-  id                String           @id @default(cuid())
-  fileName          String
-  fileType          FileType
-  fileYear          Int
-  s3Key             String           @unique
-  s3Url             String
-  fileSize          Int
-  mimeType          String
-  checksum          String?
-  status            FileStatus       @default(EN_COURS)
-  errorMessage      String?
-  processingStatus  ProcessingStatus @default(PENDING)
-  batchId           String
-  periodStart       DateTime
-  periodEnd         DateTime
-  clientId          String
-  uploadedById      String
-  uploadedAt        DateTime         @default(now())
-  processedAt       DateTime?
-  
-  client            Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  uploadedBy        User             @relation("ComptableFileUploader", fields: [uploadedById], references: [id])
-  comptablePeriod   ComptablePeriod  @relation(fields: [batchId], references: [batchId], onDelete: Cascade)
-  
+  id               String           @id @default(cuid())
+  fileName         String
+  fileType         FileType
+  fileYear         Int
+  s3Key            String           @unique
+  s3Url            String
+  fileSize         Int
+  mimeType         String
+  checksum         String?
+  status           FileStatus       @default(EN_COURS)
+  errorMessage     String?
+  processingStatus ProcessingStatus @default(PENDING)
+  batchId          String
+  periodStart      DateTime
+  periodEnd        DateTime
+  clientId         String
+  uploadedById     String
+  uploadedAt       DateTime         @default(now())
+  processedAt      DateTime?
+  comptablePeriod  ComptablePeriod  @relation(fields: [batchId], references: [batchId], onDelete: Cascade)
+  client           Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  uploadedBy       User             @relation("ComptableFileUploader", fields: [uploadedById], references: [id])
+
   @@index([clientId])
   @@index([uploadedById])
   @@index([fileType])
@@ -200,8 +193,6 @@ model ComptableFile {
   @@map("comptable_files")
 }
 
-
-// Historique pour fichiers normaux
 model NormalFileHistory {
   id         String   @id @default(cuid())
   fileId     String
@@ -219,7 +210,6 @@ model NormalFileHistory {
   @@map("normal_file_history")
 }
 
-// Historique pour fichiers comptables
 model ComptableFileHistory {
   id         String   @id @default(cuid())
   fileId     String
@@ -249,26 +239,25 @@ model FileTypePattern {
   @@map("file_type_patterns")
 }
 
-// Nouvelle table pour gérer les périodes comptables
 model ComptablePeriod {
-  id           String            @id @default(cuid())
-  clientId     String
-  periodStart  DateTime
-  periodEnd    DateTime
-  year         Int
-  batchId      String            @unique
-  status       ProcessingStatus  @default(PENDING)
-  createdAt    DateTime          @default(now())
-  processedAt  DateTime?
-  
-  client       Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  files        ComptableFile[]
-  
+  id          String           @id @default(cuid())
+  clientId    String
+  periodStart DateTime
+  periodEnd   DateTime
+  year        Int
+  batchId     String           @unique
+  status      ProcessingStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  processedAt DateTime?
+  files       ComptableFile[]
+  client      Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
   @@unique([clientId, periodStart, periodEnd])
   @@index([clientId])
   @@index([status])
   @@map("comptable_periods")
 }
+
 enum PackType {
   ENTREPRISE
   SIMPLE
@@ -303,15 +292,12 @@ enum FileType {
   CODE_JOURNAL
 }
 
-
-
-// NOUVEAU ENUM : Etats de traitement des fichiers comptables et batchs
 enum ProcessingStatus {
-  PENDING // En attente de traitement
-  VALIDATING // Validation en cours
-  PROCESSING // ETL en cours
-  COMPLETED // Traité avec succès
-  FAILED // Échec de traitement
+  PENDING
+  VALIDATING
+  PROCESSING
+  COMPLETED
+  FAILED
 }
 
 enum FileStatus {

@@ -146,6 +146,7 @@ export async function POST(req: NextRequest) {
       select: {
         id: true,
         name: true,
+        companyId: true,
       },
     });
 
@@ -213,8 +214,25 @@ export async function POST(req: NextRequest) {
     const batchId = randomUUID();
 
     // Définir le préfixe S3
+    const clientName = client.name.replace(/\s+/g, "_").replace(/[^\w\-]/g, "");
+
+    // On récupère la company liée au client (déjà vérifié plus haut que client est valide)
+    const company = await prisma.company.findUnique({
+      where: { id: client.companyId },
+      select: { name: true, id: true },
+    });
+    if (!company) {
+      return NextResponse.json(
+        { error: "Entreprise non trouvée" },
+        { status: 404 }
+      );
+    }
+    const companyName = company.name
+      .replace(/\s+/g, "_")
+      .replace(/[^\w\-]/g, "");
+
     const periodFolder = formatPeriodFolder(periodStart, periodEnd);
-    const s3Prefix = `${data.clientId}/declaration/${year}/${periodFolder}/`;
+    const s3Prefix = `${companyName}_${company.id}/${clientName}_${client.id}/declaration/${year}/${periodFolder}/`;
 
     // Créer un backup si des fichiers existent déjà
     await createBackupIfNeeded(s3Prefix);
@@ -243,10 +261,10 @@ export async function POST(req: NextRequest) {
       const ext = file.name.split(".").pop();
       const fileName = `${dateStr}_${fileType}_${client.name}.${ext}`;
 
-      const s3Key = `${s3Prefix}${fileName}`;
+      // Upload vers S3 avec rangement par type (sous-dossier pour chaque type)
+      const s3Key = `${s3Prefix}${fileType}/${fileName}`;
       const s3Url = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
 
-      // Upload vers S3
       await s3Client.send(
         new PutObjectCommand({
           Bucket: process.env.AWS_S3_BUCKET_NAME!,
