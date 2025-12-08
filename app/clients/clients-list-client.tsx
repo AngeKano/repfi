@@ -65,7 +65,7 @@ export default function ClientsListClient({
 }: ClientsListClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const [search, setSearch] = useState(initialSearch);
   const [companyType, setCompanyType] = useState(initialType);
   const [showFilters, setShowFilters] = useState(false);
@@ -149,14 +149,14 @@ export default function ClientsListClient({
                 />
               </div>
 
-              <Button
+              {/* <Button
                 type="button"
                 variant="outline"
                 onClick={() => setShowFilters(!showFilters)}
               >
                 <Filter className="w-4 h-4 mr-2" />
                 Filtres
-              </Button>
+              </Button> */}
 
               <Button type="submit">Rechercher</Button>
             </div>
@@ -238,8 +238,8 @@ export default function ClientsListClient({
                           <div className="flex items-center gap-1">
                             <FileText className="w-4 h-4" />
                             <span>
-                              {client._count.files} fichier
-                              {client._count.files > 1 ? "s" : ""}
+                              {client._count.normalFiles} fichier
+                              {client._count.normalFiles > 1 ? "s" : ""}
                             </span>
                           </div>
 
@@ -286,13 +286,15 @@ export default function ClientsListClient({
                           Membres assignés :
                         </p>
                         <div className="flex flex-wrap gap-2">
-                          {client.assignedMembers.slice(0, 3).map((member: any) => (
-                            <Badge key={member.id} variant="secondary">
-                              {member.firstName && member.lastName
-                                ? `${member.firstName} ${member.lastName}`
-                                : member.email}
-                            </Badge>
-                          ))}
+                          {client.assignedMembers
+                            .slice(0, 3)
+                            .map((member: any) => (
+                              <Badge key={member.id} variant="secondary">
+                                {member.firstName && member.lastName
+                                  ? `${member.firstName} ${member.lastName}`
+                                  : member.email}
+                              </Badge>
+                            ))}
                           {client.assignedMembers.length > 3 && (
                             <Badge variant="secondary">
                               +{client.assignedMembers.length - 3}

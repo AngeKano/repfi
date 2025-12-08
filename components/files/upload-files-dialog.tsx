@@ -11,23 +11,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload, X, FileSpreadsheet, AlertCircle } from "lucide-react";
 import { FileType } from "@prisma/client";
+import { isValidFile } from "@/utils/validate-files";
 
 interface UploadFile {
   file: File;
   id: string;
-  fileType?: FileType;
   error?: string;
 }
 
@@ -46,25 +39,13 @@ export default function UploadFilesDialog({
 }: UploadFilesDialogProps) {
   const router = useRouter();
   const [files, setFiles] = useState<UploadFile[]>([]);
-  const [selectedDate, setSelectedDate] = useState("");
+  const today = new Date().toISOString().split("T")[0];
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [dragActive, setDragActive] = useState(false);
 
   const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
   const MAX_FILES = 10;
-
-  const isValidExcel = (file: File) => {
-    const validTypes = [
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      ".xlsx",
-      ".xls",
-    ];
-    return validTypes.some(
-      (type) => file.type === type || file.name.endsWith(type)
-    );
-  };
 
   const handleFiles = (newFiles: FileList | null) => {
     if (!newFiles) return;
@@ -77,7 +58,7 @@ export default function UploadFilesDialog({
         return;
       }
 
-      if (!isValidExcel(file)) {
+      if (!isValidFile(file)) {
         return;
       }
 
@@ -127,12 +108,7 @@ export default function UploadFilesDialog({
   const handleSubmit = async () => {
     setError("");
 
-    if (!selectedDate) {
-      setError("Veuillez sélectionner une date");
-      return;
-    }
-
-    const invalidFiles = files.filter((f) => !f.fileType || f.error);
+    const invalidFiles = files.filter((f) => f.error);
     if (invalidFiles.length > 0) {
       setError("Tous les fichiers doivent avoir un type valide");
       return;
@@ -140,7 +116,7 @@ export default function UploadFilesDialog({
 
     setLoading(true);
 
-    const date = new Date(selectedDate);
+    const date = new Date(today);
     const fileYear = date.getFullYear();
     const fileMonth = date.getMonth() + 1;
     const fileDay = date.getDate();
@@ -150,12 +126,11 @@ export default function UploadFilesDialog({
         const formData = new FormData();
         formData.append("file", uploadFile.file);
         formData.append("clientId", clientId);
-        formData.append("fileType", uploadFile.fileType!);
         formData.append("fileYear", fileYear.toString());
         formData.append("fileMonth", fileMonth.toString());
         formData.append("fileDay", fileDay.toString());
 
-        const response = await fetch("/api/files", {
+        const response = await fetch("/api/files/normal/upload", {
           method: "POST",
           body: formData,
         });
@@ -167,7 +142,6 @@ export default function UploadFilesDialog({
 
       onOpenChange(false);
       setFiles([]);
-      setSelectedDate("");
       router.refresh();
       onSuccess?.();
     } catch (err) {
@@ -192,18 +166,6 @@ export default function UploadFilesDialog({
             </Alert>
           )}
 
-          {/* Date Selection */}
-          <div>
-            <Label htmlFor="date">Date des fichiers *</Label>
-            <Input
-              id="date"
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="mt-2"
-            />
-          </div>
-
           {/* Drag & Drop Zone */}
           <div
             className={`border-2 border-dashed flex-col justify-center items-center rounded-lg p-8 text-center transition-colors ${
@@ -226,7 +188,7 @@ export default function UploadFilesDialog({
             <Input
               type="file"
               multiple
-              accept=".xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              accept=".png,.jpeg,.jpg,.webp,.pdf,.doc,.docx,.xls,.xlsx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf,image/png,image/jpeg,image/jpg,image/webp"
               onChange={(e) => handleFiles(e.target.files)}
               className="hidden"
               id="file-input"
@@ -261,34 +223,6 @@ export default function UploadFilesDialog({
                       <p className="text-sm text-red-500">{uploadFile.error}</p>
                     )}
                   </div>
-                  <div className="flex-shrink-0 w-48">
-                    <Select
-                      disabled={!!uploadFile.error}
-                      value={uploadFile.fileType}
-                      onValueChange={(value) =>
-                        updateFileType(uploadFile.id, value as FileType)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Type de fichier" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="GRAND_LIVRE_COMPTES">
-                          Grand Livre Comptes
-                        </SelectItem>
-                        <SelectItem value="GRAND_LIVRE_TIERS">
-                          Grand Livre Tiers
-                        </SelectItem>
-                        <SelectItem value="PLAN_COMPTES">
-                          Plan Comptes
-                        </SelectItem>
-                        <SelectItem value="PLAN_TIERS">Plan Tiers</SelectItem>
-                        <SelectItem value="CODE_JOURNAL">
-                          Code Journal
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -319,8 +253,7 @@ export default function UploadFilesDialog({
             disabled={
               loading ||
               files.length === 0 ||
-              !selectedDate ||
-              files.filter((f) => !f.fileType || f.error).length > 0
+              files.filter((f) => f.error).length > 0
             }
           >
             {loading

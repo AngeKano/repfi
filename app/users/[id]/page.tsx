@@ -2,10 +2,10 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
-import { PrismaClient } from "@prisma/client";
+
 import UserDetailsClient from "./user-details-client";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export default async function UserDetailsPage({
   params,
@@ -45,7 +45,7 @@ export default async function UserDetailsPage({
       _count: {
         select: {
           clientAssignments: true,
-          uploadedFiles: true,
+          normalFiles: true,
         },
       },
     },

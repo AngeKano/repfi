@@ -1,4 +1,3 @@
-// app/clients/[id]/client-details-client.tsx
 "use client";
 
 import { useState } from "react";
@@ -24,11 +23,11 @@ import {
   Twitter,
   Calendar,
   UserPlus,
-  UserMinus,
-  Download,
 } from "lucide-react";
 import Link from "next/link";
-import UploadFilesDialog from "@/components/files/upload-files-dialog";
+import { toast } from "sonner";
+import FilesTabs from "./files-tabs";
+import DeclarationTabs from "./declaration/declaration-tabs";
 
 interface ClientDetailsClientProps {
   session: any;
@@ -42,7 +41,6 @@ export default function ClientDetailsClient({
   const router = useRouter();
   const [client, setClient] = useState(initialClient);
   const [loading, setLoading] = useState(false);
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   const [error, setError] = useState("");
 
@@ -72,6 +70,33 @@ export default function ClientDetailsClient({
     } catch (err: any) {
       setError(err.message || "Erreur lors de la suppression");
       setLoading(false);
+    }
+  };
+
+  const handleDownload = async (fileId: string, fileName: string) => {
+    try {
+      // Appeler l'API pour obtenir l'URL signée
+      const response = await fetch(`/api/files/download/${fileId}`);
+
+      if (!response.ok) {
+        throw new Error("Erreur lors du téléchargement");
+      }
+
+      const data = await response.json();
+
+      // Télécharger le fichier avec l'URL signée
+      const link = document.createElement("a");
+      link.href = data.url;
+      link.download = fileName;
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success("Téléchargement démarré");
+    } catch (error) {
+      console.error("Erreur téléchargement:", error);
+      toast.error("Erreur lors du téléchargement du fichier");
     }
   };
 
@@ -327,8 +352,11 @@ export default function ClientDetailsClient({
                 <TabsTrigger value="members">
                   Membres ({client.stats.totalMembers})
                 </TabsTrigger>
+                <TabsTrigger value="declaration">
+                  Reporting Financier ({client.stats.totalComptablePeriods})
+                </TabsTrigger>
                 <TabsTrigger value="files">
-                  Fichiers ({client.stats.totalFiles})
+                  Autres fichiers ({client.stats.totalFiles})
                 </TabsTrigger>
               </TabsList>
 
@@ -442,88 +470,11 @@ export default function ClientDetailsClient({
                 </Card>
               </TabsContent>
 
-              {/* Files Tab */}
-              <TabsContent value="files">
-                <Card className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold">Fichiers récents</h2>
-                    <Button size="sm" onClick={() => setUploadDialogOpen(true)}>
-                      Uploader des fichiers
-                    </Button>
-                  </div>
+              {/* Declaration Tab */}
+              <DeclarationTabs clientId={client.id} />
 
-                  {client.recentFiles && client.recentFiles.length > 0 ? (
-                    <div className="space-y-3">
-                      {client.recentFiles.map((file: any) => (
-                        <div
-                          key={file.id}
-                          className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="flex items-center gap-3 flex-1">
-                            <FileText className="w-5 h-5 text-gray-400" />
-                            <div className="flex-1">
-                              <p className="font-medium">{file.fileName}</p>
-                              <p className="text-sm text-gray-500">
-                                {(file.fileSize / 1024).toFixed(2)} KB •{" "}
-                                {new Date(file.uploadedAt).toLocaleDateString(
-                                  "fr-FR"
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge
-                              variant={
-                                file.status === "SUCCES"
-                                  ? "default"
-                                  : file.status === "ERROR"
-                                  ? "destructive"
-                                  : "secondary"
-                              }
-                            >
-                              {file.status === "EN_COURS"
-                                ? "En cours"
-                                : file.status}
-                            </Badge>
-                            {file.status === "ERROR" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={async () => {
-                                  await fetch(`/api/files/${file.id}/retry`, {
-                                    method: "PUT",
-                                  });
-                                  router.refresh();
-                                }}
-                              >
-                                Relancer
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                      <p className="text-gray-500">Aucun fichier</p>
-                      <Button
-                        variant="outline"
-                        className="mt-4"
-                        onClick={() => setUploadDialogOpen(true)}
-                      >
-                        Uploader des fichiers
-                      </Button>
-                    </div>
-                  )}
-                </Card>
-              </TabsContent>
-              <UploadFilesDialog
-                open={uploadDialogOpen}
-                onOpenChange={setUploadDialogOpen}
-                clientId={client.id}
-                onSuccess={() => router.refresh()}
-              />
+              {/* Files Tab */}
+              <FilesTabs clientId={client.id} />
             </Tabs>
           </div>
         </div>

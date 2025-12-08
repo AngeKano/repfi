@@ -2,11 +2,10 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
-import { PrismaClient } from "@prisma/client";
-import DashboardClient from "./dashboard-client";
-// import DashboardClient from "./dashboard-client";
 
-const prisma = new PrismaClient();
+import DashboardClient from "./dashboard-client";
+
+import { prisma } from "@/lib/prisma";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -26,7 +25,7 @@ export default async function DashboardPage() {
       where: { companyId: session.user.companyId },
     });
 
-    filesCount = await prisma.file.count({
+    filesCount = await prisma.normalFile.count({
       where: {
         client: { companyId: session.user.companyId },
         deletedAt: null,
@@ -45,7 +44,7 @@ export default async function DashboardPage() {
 
     clientsCount = assignments.length;
 
-    filesCount = await prisma.file.count({
+    filesCount = await prisma.normalFile.count({
       where: {
         clientId: { in: assignments.map((a) => a.clientId) },
         deletedAt: null,
@@ -93,7 +92,7 @@ export default async function DashboardPage() {
   // Récupérer les fichiers récents
   let recentFiles;
   if (session.user.role === "ADMIN_ROOT" || session.user.role === "ADMIN") {
-    recentFiles = await prisma.file.findMany({
+    recentFiles = await prisma.normalFile.findMany({
       where: {
         client: { companyId: session.user.companyId },
         deletedAt: null,
@@ -112,7 +111,7 @@ export default async function DashboardPage() {
       where: { userId: session.user.id },
     });
 
-    recentFiles = await prisma.file.findMany({
+    recentFiles = await prisma.normalFile.findMany({
       where: {
         clientId: { in: assignments.map((a) => a.clientId) },
         deletedAt: null,

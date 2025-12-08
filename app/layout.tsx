@@ -6,8 +6,8 @@ import { Providers } from "./providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: " Excel Transformer",
-  description: "Transformateur de fichiers Excel ",
+  title: "Repfi",
+  description: "Reporting financier",
 };
 
 export default function RootLayout({
