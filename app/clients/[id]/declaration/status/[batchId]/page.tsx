@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle, Clock, XCircle, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CheckCircle, Clock, XCircle, Loader2, Download } from "lucide-react";
+import { toast } from "sonner";
 
 export default function StatusPage({
   params: asyncParams,
@@ -17,6 +19,44 @@ export default function StatusPage({
     clientId: string;
     batchId: string;
   } | null>(null);
+  const [downloading, setDownloading] = useState(false);
+
+  // Download Excel handler, same as in index.tsx (92-124)
+  const handleDownloadExcel = async () => {
+    if (!status?.periodId) return;
+    setDownloading(true);
+    try {
+      const res = await fetch(
+        `/api/files/download/${encodeURIComponent(status.periodId)}`,
+        {
+          method: "GET",
+        }
+      );
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
+      if (!res.ok) {
+        throw new Error(data.error || "Erreur lors du téléchargement");
+      }
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      } else {
+        throw new Error("Lien de téléchargement indisponible");
+      }
+    } catch (error: any) {
+      toast.error(
+        <>
+          <div className="font-semibold">Erreur de téléchargement</div>
+          <div>{error.message}</div>
+        </>
+      );
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -131,6 +171,21 @@ export default function StatusPage({
         </div>
 
         <Progress value={status.progress} className="mb-6" />
+
+        {/* Button Download Only if Terminé */}
+        {status.status === "COMPLETED" && (
+          <div className="mb-6 flex">
+            <Button
+              size="sm"
+              onClick={handleDownloadExcel}
+              disabled={downloading}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              {downloading ? "Téléchargement..." : "Télécharger l'export Excel"}
+            </Button>
+          </div>
+        )}
 
         <div className="space-y-3">
           <h3 className="font-semibold">Fichiers traités</h3>

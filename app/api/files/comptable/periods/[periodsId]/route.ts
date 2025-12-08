@@ -20,7 +20,7 @@ const s3Client = new S3Client({
 });
 
 const clickhouseClient = createClickhouseClient({
-  host: process.env.CLICKHOUSE_HOST || "http://localhost:8123",
+  url: process.env.CLICKHOUSE_HOST || "http://localhost:8123",
   username: process.env.CLICKHOUSE_USER || "default",
   password: process.env.CLICKHOUSE_PASSWORD || "",
 });
@@ -36,7 +36,6 @@ export async function DELETE(
     }
 
     // Get id from param
-    console.log("params", params);
     const { periodsId } = params;
     const periodId = periodsId;
 

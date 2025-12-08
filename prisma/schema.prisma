@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Company {
@@ -248,6 +249,7 @@ model ComptablePeriod {
   status      ProcessingStatus @default(PENDING)
   createdAt   DateTime         @default(now())
   processedAt DateTime?
+  excelFileUrl  String?          // URL S3 du fichier Excel généré
   files       ComptableFile[]
   client      Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
 

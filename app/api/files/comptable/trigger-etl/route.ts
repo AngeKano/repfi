@@ -148,7 +148,6 @@ export async function POST(req: NextRequest) {
       .replace(/\s+/g, "_")
       .replace(/[^\w\-]/g, "");
     const companyId = comptablePeriod.client.companyId;
-    // On peut encoder le nom "entreprise" dans le préfixe pour garder la conformité si besoin :
     const company = await prisma.company.findUnique({
       where: { id: companyId },
       select: { name: true, id: true },
