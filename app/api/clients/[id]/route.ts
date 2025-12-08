@@ -151,7 +151,7 @@ export async function GET(
             },
           },
         },
-        files: {
+        normalFiles: {
           where: { deletedAt: null },
           orderBy: { uploadedAt: "desc" },
           take: 10,
@@ -160,7 +160,6 @@ export async function GET(
             fileName: true,
             fileSize: true,
             mimeType: true,
-            status: true,
             uploadedAt: true,
             uploadedBy: {
               select: {
@@ -174,7 +173,7 @@ export async function GET(
         },
         _count: {
           select: {
-            files: {
+            normalFiles: {
               where: { deletedAt: null },
             },
             assignments: true,
@@ -187,9 +186,9 @@ export async function GET(
       client: {
         ...clientDetails,
         assignedMembers: clientDetails?.assignments.map((a) => a.user),
-        recentFiles: clientDetails?.files,
+        recentFiles: clientDetails?.normalFiles,
         stats: {
-          totalFiles: clientDetails?._count.files || 0,
+          totalFiles: clientDetails?._count.normalFiles || 0,
           totalMembers: clientDetails?._count.assignments || 0,
         },
       },

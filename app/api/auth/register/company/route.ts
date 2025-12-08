@@ -16,7 +16,14 @@ export async function POST(request: Request) {
     } = body;
 
     // Validation des champs obligatoires
-    if (!email || !password || !nom || !denomination || !dateFondation || !typeEntreprise) {
+    if (
+      !email ||
+      !password ||
+      !nom ||
+      !denomination ||
+      !dateFondation ||
+      !typeEntreprise
+    ) {
       return NextResponse.json(
         { error: "Tous les champs obligatoires doivent être remplis" },
         { status: 400 }
@@ -47,14 +54,6 @@ export async function POST(request: Request) {
           { status: 404 }
         );
       }
-
-      // Vérifier que l'entreprise parente n'est pas elle-même une filiale
-      if (parentCompany.parentCompanyId) {
-        return NextResponse.json(
-          { error: "Une filiale ne peut pas créer d'autres filiales" },
-          { status: 403 }
-        );
-      }
     }
 
     // Hasher le mot de passe
@@ -64,22 +63,24 @@ export async function POST(request: Request) {
     const company = await prisma.company.create({
       data: {
         email,
-        password: hashedPassword,
-        nom,
+        name: nom,
         denomination,
-        dateFondation: new Date(dateFondation),
-        typeEntreprise,
-        parentCompanyId: parentCompanyId || null,
+        companyType: typeEntreprise,
+        createdAt: new Date(), // Prisma will set this by default but can be included
+        packType: "SIMPLE", // valeur par défaut, à adapter selon besoin
+        phone: null,
+        website: null,
+        description: null,
+        // parentCompanyId can only be set if the schema allows for it (not in provided schema)
       },
       select: {
         id: true,
         email: true,
-        nom: true,
+        name: true,
         denomination: true,
-        typeEntreprise: true,
-        dateFondation: true,
-        parentCompanyId: true,
+        companyType: true,
         createdAt: true,
+        // parentCompanyId is omitted as not in schema, dateFondation likewise
       },
     });
 
