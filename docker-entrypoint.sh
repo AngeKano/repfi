@@ -4,8 +4,8 @@ set -e
 echo "Generating Prisma client..."
 npx prisma generate
 
-echo "Running database migrations..."
-DATABASE_URL="${DATABASE_URL}" npx prisma migrate deploy
+echo "Pushing database schema..."
+npx prisma db push --skip-generate
 
 echo "Starting application..."
 exec node server.js
