@@ -1,9 +1,9 @@
 // app/api/auth/signup/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { hash } from 'bcrypt';
-import { z } from 'zod';
-import { PrismaClient, CompanyType, PackType } from '@prisma/client';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { NextRequest, NextResponse } from "next/server";
+import { hash } from "bcrypt";
+import { z } from "zod";
+import { PrismaClient, CompanyType, PackType } from "@prisma/client";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 const prisma = new PrismaClient();
 
@@ -15,41 +15,52 @@ const s3Client = new S3Client({
   },
 });
 
-const signUpSchema = z.object({
-  companyName: z.string().min(2).max(100),
-  companyEmail: z.string().email().toLowerCase(),
-  companyType: z.nativeEnum(CompanyType),
-  packType: z.nativeEnum(PackType),
-  companyPhone: z.string().optional(),
-  companyWebsite: z.string().url().optional().or(z.literal('')),
-  companyDescription: z.string().max(1000).optional(),
-  companyDenomination: z.string().max(100).optional(),
-  adminEmail: z.string().email().toLowerCase(),
-  adminPassword: z.string()
-    .min(8)
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Mot de passe faible'),
-  adminPasswordConfirm: z.string(),
-  adminFirstName: z.string().min(2).max(50).optional(),
-  adminLastName: z.string().min(2).max(50).optional(),
-}).refine((data) => data.adminPassword === data.adminPasswordConfirm, {
-  message: 'Les mots de passe ne correspondent pas',
-  path: ['adminPasswordConfirm'],
-});
+const signUpSchema = z
+  .object({
+    companyName: z.string().min(2).max(100),
+    companyEmail: z.string().email().toLowerCase(),
+    companyType: z.nativeEnum(CompanyType),
+    packType: z.nativeEnum(PackType),
+    companyPhone: z.string().optional(),
+    companyWebsite: z.string().url().optional().or(z.literal("")),
+    companyDescription: z.string().max(1000).optional(),
+    companyDenomination: z.string().max(100).optional(),
+    adminEmail: z.string().email().toLowerCase(),
+    adminPassword: z
+      .string()
+      .min(8)
+      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Mot de passe faible"),
+    adminPasswordConfirm: z.string(),
+    adminFirstName: z.string().min(2).max(50).optional(),
+    adminLastName: z.string().min(2).max(50).optional(),
+  })
+  .refine((data) => data.adminPassword === data.adminPasswordConfirm, {
+    message: "Les mots de passe ne correspondent pas",
+    path: ["adminPasswordConfirm"],
+  });
 
-async function createS3Folders(companyId: string, selfEntityId: string) {
+async function createS3Folders(
+  name: string,
+  companyId: string,
+  selfEntityId: string
+) {
   const bucketName = process.env.AWS_S3_BUCKET_NAME!;
-  
-  await s3Client.send(new PutObjectCommand({
-    Bucket: bucketName,
-    Key: `${companyId}/`,
-    Body: '',
-  }));
-  
-  await s3Client.send(new PutObjectCommand({
-    Bucket: bucketName,
-    Key: `${companyId}/${selfEntityId}/`,
-    Body: '',
-  }));
+
+  await s3Client.send(
+    new PutObjectCommand({
+      Bucket: bucketName,
+      Key: `${name}_${companyId}/`,
+      Body: "",
+    })
+  );
+
+  await s3Client.send(
+    new PutObjectCommand({
+      Bucket: bucketName,
+      Key: `${name}_${companyId}/${name}_${selfEntityId}/`,
+      Body: "",
+    })
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -63,7 +74,7 @@ export async function POST(req: NextRequest) {
 
     if (existingCompany) {
       return NextResponse.json(
-        { error: 'Cette entreprise est déjà enregistrée' },
+        { error: "Cette entreprise est déjà enregistrée" },
         { status: 409 }
       );
     }
@@ -74,7 +85,7 @@ export async function POST(req: NextRequest) {
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'Cet email est déjà utilisé' },
+        { error: "Cet email est déjà utilisé" },
         { status: 409 }
       );
     }
@@ -102,7 +113,7 @@ export async function POST(req: NextRequest) {
           firstName: data.adminFirstName,
           lastName: data.adminLastName,
           companyId: company.id,
-          role: 'ADMIN_ROOT',
+          role: "ADMIN_ROOT",
           isActive: true,
         },
         select: {
@@ -130,7 +141,7 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      await createS3Folders(company.id, selfEntity.id);
+      await createS3Folders(company.name, company.id, selfEntity.id);
 
       return {
         company: {
@@ -150,34 +161,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        message: 'Entreprise créée avec succès',
+        message: "Entreprise créée avec succès",
         data: result,
       },
       { status: 201 }
     );
-
   } catch (error: any) {
-    console.error('Signup error:', error);
+    console.error("Signup error:", error);
 
-    if (error.name === 'ZodError') {
+    if (error.name === "ZodError") {
       return NextResponse.json(
-        { 
-          error: 'Données invalides', 
-          details: error.errors 
+        {
+          error: "Données invalides",
+          details: error.errors,
         },
         { status: 400 }
       );
     }
 
-    if (error.code === 'P2002') {
+    if (error.code === "P2002") {
       return NextResponse.json(
-        { error: 'Email déjà utilisé' },
+        { error: "Email déjà utilisé" },
         { status: 409 }
       );
     }
 
     return NextResponse.json(
-      { error: 'Erreur lors de l\'inscription' },
+      { error: "Erreur lors de l'inscription" },
       { status: 500 }
     );
   }

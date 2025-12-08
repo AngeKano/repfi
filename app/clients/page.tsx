@@ -78,7 +78,7 @@ export default async function ClientsPage({
         updatedAt: true,
         _count: {
           select: {
-            files: true,
+            normalFiles: true,
             assignments: true,
           },
         },

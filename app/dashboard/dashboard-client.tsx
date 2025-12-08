@@ -14,9 +14,11 @@ import {
   Plus,
   Settings,
   TrendingUp,
+  Download,
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 interface DashboardClientProps {
   session: any;
@@ -49,6 +51,33 @@ export default function DashboardClient({
       USER: { variant: "secondary", label: "Utilisateur" },
     };
     return variants[role] || variants.USER;
+  };
+
+  const handleDownload = async (fileId: string, fileName: string) => {
+    try {
+      // Appeler l'API pour obtenir l'URL signée
+      const response = await fetch(`/api/files/download/normal/${fileId}`);
+
+      if (!response.ok) {
+        throw new Error("Erreur lors du téléchargement");
+      }
+
+      const data = await response.json();
+
+      // Télécharger le fichier avec l'URL signée
+      const link = document.createElement("a");
+      link.href = data.url;
+      link.download = fileName;
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success("Téléchargement démarré");
+    } catch (error) {
+      console.error("Erreur téléchargement:", error);
+      toast.error("Erreur lors du téléchargement du fichier");
+    }
   };
 
   const roleInfo = getRoleBadge(session.user.role);
@@ -285,11 +314,11 @@ export default function DashboardClient({
             <h3 className="text-lg font-semibold text-gray-900">
               Fichiers récents
             </h3>
-            <Link href="/files">
+            {/* <Link href="/files">
               <Button variant="ghost" size="sm">
-                Voir tout Pas
+                Voir tout
               </Button>
-            </Link>
+            </Link> */}
           </div>
 
           {recentFiles.length === 0 ? (
@@ -317,21 +346,32 @@ export default function DashboardClient({
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <Badge
-                      variant={
-                        file.status === "SUCCES"
-                          ? "default"
-                          : file.status === "ERROR"
-                          ? "destructive"
-                          : "secondary"
-                      }
-                    >
-                      {file.status}
-                    </Badge>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {new Date(file.uploadedAt).toLocaleDateString("fr-FR")}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <Badge
+                        variant={
+                          file.status === "SUCCES"
+                            ? "default"
+                            : file.status === "ERROR"
+                            ? "destructive"
+                            : "secondary"
+                        }
+                      >
+                        {file.status}
+                      </Badge>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(file.uploadedAt).toLocaleDateString("fr-FR")}
+                      </p>
+                    </div>
+                    {file.status === "SUCCES" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownload(file.id, file.fileName)}
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
