@@ -17,7 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import Link from "next/link";
-import { FileText, Calendar, Eye, Trash2 } from "lucide-react";
+import { FileText, Calendar, Eye, Trash2, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -48,7 +48,7 @@ const DeclarationTabs: React.FC<DeclarationTabsProps> = ({ clientId }) => {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!periodToDelete) return;
+    if (!periodToDelete.id) return;
 
     setDeleting(true);
 
@@ -86,6 +86,39 @@ const DeclarationTabs: React.FC<DeclarationTabsProps> = ({ clientId }) => {
       setDeleting(false);
       setDeleteDialogOpen(false);
       setPeriodToDelete(null);
+    }
+  };
+
+  const handleDownloadExcel = async (period: any) => {
+    if (!period?.id) return;
+    try {
+      const res = await fetch(
+        `/api/files/download/${encodeURIComponent(period.id)}`,
+        {
+          method: "GET",
+        }
+      );
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
+      if (!res.ok) {
+        throw new Error(data.error || "Erreur lors du téléchargement");
+      }
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      } else {
+        throw new Error("Lien de téléchargement indisponible");
+      }
+    } catch (error: any) {
+      toast?.error(
+        <>
+          <div className="font-semibold">Erreur de téléchargement</div>
+          <div>{error.message}</div>
+        </>
+      );
     }
   };
 
@@ -145,6 +178,18 @@ const DeclarationTabs: React.FC<DeclarationTabsProps> = ({ clientId }) => {
                       {period.status === "COMPLETED" && "Terminé"}
                       {period.status === "FAILED" && "Échec"}
                     </Badge>
+                    {/* Download button for excelFileUrl, only if COMPLETED and excelFileUrl is present */}
+                    {period.status === "COMPLETED" && period.excelFileUrl && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDownloadExcel(period)}
+                        title="Télécharger le fichier Excel"
+                      >
+                        <Download className="w-4 h-4 mr-1" />
+                        Télécharger
+                      </Button>
+                    )}
                     <Link
                       href={`/clients/${clientId}/declaration/status/${period.batchId}`}
                     >

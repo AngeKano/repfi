@@ -56,7 +56,7 @@ export default function DashboardClient({
   const handleDownload = async (fileId: string, fileName: string) => {
     try {
       // Appeler l'API pour obtenir l'URL signée
-      const response = await fetch(`/api/files/download/${fileId}`);
+      const response = await fetch(`/api/files/download/normal/${fileId}`);
 
       if (!response.ok) {
         throw new Error("Erreur lors du téléchargement");
