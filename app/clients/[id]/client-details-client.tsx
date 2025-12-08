@@ -353,10 +353,10 @@ export default function ClientDetailsClient({
                   Membres ({client.stats.totalMembers})
                 </TabsTrigger>
                 <TabsTrigger value="declaration">
-                  Declaration ({client.stats.totalComptablePeriods})
+                  Reporting Financier ({client.stats.totalComptablePeriods})
                 </TabsTrigger>
                 <TabsTrigger value="files">
-                  Fichiers ({client.stats.totalFiles})
+                  Autres fichiers ({client.stats.totalFiles})
                 </TabsTrigger>
               </TabsList>
 

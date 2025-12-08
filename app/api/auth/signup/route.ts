@@ -2,10 +2,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hash } from "bcrypt";
 import { z } from "zod";
-import { PrismaClient, CompanyType, PackType } from "@prisma/client";
+import { CompanyType, PackType } from "@prisma/client";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma'
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION!,

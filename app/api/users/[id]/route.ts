@@ -6,14 +6,12 @@
  * GET /api/users/:id - Détails d'un membre
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
-import { PrismaClient } from '@prisma/client';
-import { z } from 'zod';
-import bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../auth/[...nextauth]/route";
+import { z } from "zod";
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
 
 // Schéma de validation pour la mise à jour
 const updateUserSchema = z.object({
@@ -21,14 +19,18 @@ const updateUserSchema = z.object({
   password: z.string().min(8).optional(),
   firstName: z.string().min(2).max(100).optional().nullable(),
   lastName: z.string().min(2).max(100).optional().nullable(),
-  role: z.enum(['ADMIN', 'USER']).optional(),
+  role: z.enum(["ADMIN", "USER"]).optional(),
   isActive: z.boolean().optional(),
 });
 
 /**
  * Vérifier l'accès à l'utilisateur
  */
-async function checkUserAccess(userId: string, sessionUserId: string, role: string) {
+async function checkUserAccess(
+  userId: string,
+  sessionUserId: string,
+  role: string
+) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
@@ -48,11 +50,11 @@ async function checkUserAccess(userId: string, sessionUserId: string, role: stri
   });
 
   if (!user) {
-    return { hasAccess: false, user: null, error: 'Utilisateur non trouvé' };
+    return { hasAccess: false, user: null, error: "Utilisateur non trouvé" };
   }
 
   // Admin peut accéder à tous les membres de son entreprise
-  if (role === 'ADMIN_ROOT' || role === 'ADMIN') {
+  if (role === "ADMIN_ROOT" || role === "ADMIN") {
     return { hasAccess: true, user, error: null };
   }
 
@@ -80,10 +82,7 @@ export async function GET(
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Non authentifié' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
     const { hasAccess, user, error } = await checkUserAccess(
@@ -94,8 +93,8 @@ export async function GET(
 
     if (!hasAccess) {
       return NextResponse.json(
-        { error: error || 'Accès refusé' },
-        { status: error === 'Utilisateur non trouvé' ? 404 : 403 }
+        { error: error || "Accès refusé" },
+        { status: error === "Utilisateur non trouvé" ? 404 : 403 }
       );
     }
 
@@ -115,7 +114,7 @@ export async function GET(
           },
         },
       },
-      orderBy: { assignedAt: 'desc' },
+      orderBy: { assignedAt: "desc" },
     });
 
     return NextResponse.json({
@@ -128,7 +127,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('GET /api/users/:id error:', error);
+    console.error("GET /api/users/:id error:", error);
     return NextResponse.json(
       { error: "Erreur lors de la récupération de l'utilisateur" },
       { status: 500 }
@@ -148,19 +147,17 @@ export async function PATCH(
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Non authentifié' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
     // Vérifier les permissions
-    const isAdmin = session.user.role === 'ADMIN_ROOT' || session.user.role === 'ADMIN';
+    const isAdmin =
+      session.user.role === "ADMIN_ROOT" || session.user.role === "ADMIN";
     const isSelf = params.id === session.user.id;
 
     if (!isAdmin && !isSelf) {
       return NextResponse.json(
-        { error: 'Permissions insuffisantes' },
+        { error: "Permissions insuffisantes" },
         { status: 403 }
       );
     }
@@ -173,8 +170,8 @@ export async function PATCH(
 
     if (!hasAccess) {
       return NextResponse.json(
-        { error: error || 'Accès refusé' },
-        { status: error === 'Utilisateur non trouvé' ? 404 : 403 }
+        { error: error || "Accès refusé" },
+        { status: error === "Utilisateur non trouvé" ? 404 : 403 }
       );
     }
 
@@ -185,14 +182,14 @@ export async function PATCH(
     if (!isAdmin) {
       if (data.role || data.isActive !== undefined) {
         return NextResponse.json(
-          { error: 'Vous ne pouvez pas modifier le rôle ou le statut' },
+          { error: "Vous ne pouvez pas modifier le rôle ou le statut" },
           { status: 403 }
         );
       }
     }
 
     // ADMIN ne peut pas modifier un ADMIN_ROOT
-    if (session.user.role === 'ADMIN' && user?.role === 'ADMIN_ROOT') {
+    if (session.user.role === "ADMIN" && user?.role === "ADMIN_ROOT") {
       return NextResponse.json(
         { error: "Vous ne pouvez pas modifier un administrateur root" },
         { status: 403 }
@@ -200,9 +197,9 @@ export async function PATCH(
     }
 
     // ADMIN ne peut pas promouvoir quelqu'un en ADMIN
-    if (session.user.role === 'ADMIN' && data.role === 'ADMIN') {
+    if (session.user.role === "ADMIN" && data.role === "ADMIN") {
       return NextResponse.json(
-        { error: 'Vous ne pouvez pas créer un administrateur' },
+        { error: "Vous ne pouvez pas créer un administrateur" },
         { status: 403 }
       );
     }
@@ -215,7 +212,7 @@ export async function PATCH(
 
       if (existingUser) {
         return NextResponse.json(
-          { error: 'Cet email est déjà utilisé' },
+          { error: "Cet email est déjà utilisé" },
           { status: 409 }
         );
       }
@@ -257,15 +254,15 @@ export async function PATCH(
     });
 
     return NextResponse.json({
-      message: 'Utilisateur mis à jour avec succès',
+      message: "Utilisateur mis à jour avec succès",
       user: updatedUser,
     });
   } catch (error: any) {
-    console.error('PATCH /api/users/:id error:', error);
+    console.error("PATCH /api/users/:id error:", error);
 
-    if (error.name === 'ZodError') {
+    if (error.name === "ZodError") {
       return NextResponse.json(
-        { error: 'Données invalides', details: error.errors },
+        { error: "Données invalides", details: error.errors },
         { status: 400 }
       );
     }
@@ -289,16 +286,13 @@ export async function DELETE(
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Non authentifié' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
     // Seuls les admins peuvent désactiver
-    if (session.user.role !== 'ADMIN_ROOT' && session.user.role !== 'ADMIN') {
+    if (session.user.role !== "ADMIN_ROOT" && session.user.role !== "ADMIN") {
       return NextResponse.json(
-        { error: 'Permissions insuffisantes' },
+        { error: "Permissions insuffisantes" },
         { status: 403 }
       );
     }
@@ -311,21 +305,21 @@ export async function DELETE(
 
     if (!hasAccess) {
       return NextResponse.json(
-        { error: error || 'Accès refusé' },
-        { status: error === 'Utilisateur non trouvé' ? 404 : 403 }
+        { error: error || "Accès refusé" },
+        { status: error === "Utilisateur non trouvé" ? 404 : 403 }
       );
     }
 
     // Ne peut pas se désactiver soi-même
     if (params.id === session.user.id) {
       return NextResponse.json(
-        { error: 'Vous ne pouvez pas vous désactiver vous-même' },
+        { error: "Vous ne pouvez pas vous désactiver vous-même" },
         { status: 403 }
       );
     }
 
     // ADMIN ne peut pas désactiver un ADMIN_ROOT
-    if (session.user.role === 'ADMIN' && user?.role === 'ADMIN_ROOT') {
+    if (session.user.role === "ADMIN" && user?.role === "ADMIN_ROOT") {
       return NextResponse.json(
         { error: "Vous ne pouvez pas désactiver un administrateur root" },
         { status: 403 }
@@ -333,7 +327,7 @@ export async function DELETE(
     }
 
     // Ne peut pas désactiver un ADMIN_ROOT
-    if (user?.role === 'ADMIN_ROOT') {
+    if (user?.role === "ADMIN_ROOT") {
       return NextResponse.json(
         { error: "Impossible de désactiver un administrateur root" },
         { status: 403 }
@@ -350,10 +344,10 @@ export async function DELETE(
     });
 
     return NextResponse.json({
-      message: 'Utilisateur désactivé avec succès',
+      message: "Utilisateur désactivé avec succès",
     });
   } catch (error) {
-    console.error('DELETE /api/users/:id error:', error);
+    console.error("DELETE /api/users/:id error:", error);
     return NextResponse.json(
       { error: "Erreur lors de la désactivation de l'utilisateur" },
       { status: 500 }

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { PrismaClient } from "@prisma/client";
+
 import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION!,

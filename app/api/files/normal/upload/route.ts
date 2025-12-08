@@ -6,7 +6,7 @@ import { z } from "zod";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 
 // Instantiate Prisma client
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 // Instantiate S3 client
 const s3Client = new S3Client({
   region: process.env.AWS_REGION!,

@@ -1,12 +1,12 @@
 // app/api/files/download/[fileId]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { PrismaClient } from "@prisma/client";
+
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION!,

@@ -12,7 +12,7 @@ import { z } from "zod";
 import { randomUUID } from "crypto";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION!,

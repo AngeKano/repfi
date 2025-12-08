@@ -4,10 +4,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
-import { PrismaClient } from "@prisma/client";
+
 import { z } from "zod";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const assignMembersSchema = z.object({
   userIds: z.array(z.string().min(1)).min(1, "Au moins un membre requis"),

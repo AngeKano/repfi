@@ -5,7 +5,7 @@ import { PrismaClient, ProcessingStatus } from "@prisma/client";
 import { z } from "zod";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const triggerETLSchema = z.object({
   batchId: z.string().uuid(),

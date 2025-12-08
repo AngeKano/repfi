@@ -2,10 +2,10 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
-import { PrismaClient } from "@prisma/client";
+
 import UsersListClient from "./users-list-client";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export default async function UsersPage({
   searchParams,

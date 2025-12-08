@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { PrismaClient } from "@prisma/client";
+
 import { z } from "zod";
 import { authOptions } from "../../auth/[...nextauth]/route";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const updateFolderSchema = z.object({
   name: z.string().min(1).max(255),
@@ -34,7 +34,10 @@ export async function PATCH(
     });
 
     if (!folder) {
-      return NextResponse.json({ error: "Dossier non trouvé" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Dossier non trouvé" },
+        { status: 404 }
+      );
     }
 
     const updatedFolder = await prisma.folder.update({
@@ -98,7 +101,10 @@ export async function DELETE(
     });
 
     if (!folder) {
-      return NextResponse.json({ error: "Dossier non trouvé" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Dossier non trouvé" },
+        { status: 404 }
+      );
     }
 
     if (folder._count.children > 0 || folder._count.files > 0) {

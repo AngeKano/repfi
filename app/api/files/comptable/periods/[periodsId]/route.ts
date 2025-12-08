@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { PrismaClient } from "@prisma/client";
+
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { createClient as createClickhouseClient } from "@clickhouse/client";
 import {
@@ -9,7 +9,7 @@ import {
   ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION!,

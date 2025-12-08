@@ -8,11 +8,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
-import { PrismaClient } from "@prisma/client";
+
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // Schéma de validation pour la création
 const createUserSchema = z.object({

@@ -2,10 +2,10 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
-import { PrismaClient } from "@prisma/client";
+
 import DeclarationComptable from "./declaration-comptable";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export default async function DeclarationComptablePage({
   params,
@@ -42,11 +42,5 @@ export default async function DeclarationComptablePage({
     redirect("/clients");
   }
 
-
-  return (
-    <DeclarationComptable
-      session={session}
-      client={client}
-    />
-  );
+  return <DeclarationComptable session={session} client={client} />;
 }

@@ -127,11 +127,13 @@ const DeclarationTabs: React.FC<DeclarationTabsProps> = ({ clientId }) => {
       <TabsContent value="declaration">
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Déclarations comptables</h2>
+            <h2 className="text-lg font-semibold">
+              Documents de reporting financier
+            </h2>
             <Link href={`/clients/${clientId}/declaration`}>
               <Button size="sm">
                 <FileText className="w-4 h-4 mr-2" />
-                Nouvelle déclaration
+                Nouveaux documents
               </Button>
             </Link>
           </div>
@@ -220,7 +222,7 @@ const DeclarationTabs: React.FC<DeclarationTabsProps> = ({ clientId }) => {
               <Link href={`/clients/${clientId}/declaration`}>
                 <Button variant="outline" className="mt-4">
                   <FileText className="w-4 h-4 mr-2" />
-                  Créer une déclaration
+                  Nouveaux documents
                 </Button>
               </Link>
             </div>

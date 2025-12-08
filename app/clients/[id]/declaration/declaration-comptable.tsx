@@ -274,7 +274,7 @@ export default function DeclarationComptable({
               </Link>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
-                  Déclaration Comptable
+                  Ajouter des documents
                 </h1>
                 <p className="text-sm text-gray-500">{client.name}</p>
               </div>
